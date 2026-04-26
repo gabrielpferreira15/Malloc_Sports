@@ -1,12 +1,20 @@
-# Ignorar configurações locais do VS Code
-.vscode/
-
-# Ignorar arquivos temporários e binários
+# Objetos e binarios
 *.o
-*.exe
-*.out
-build/
+*.obj
+malloc_sports
+malloc_sports.exe
 
-# Ignorar arquivos de sistema
+# Arquivo gerado em runtime
+scores.dat
+
+# Editores / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
 .DS_Store
 Thumbs.db
+
+# Build dirs
+build/
+out/

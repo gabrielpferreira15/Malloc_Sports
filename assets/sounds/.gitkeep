@@ -1,0 +1,4 @@
+# Pasta para efeitos sonoros (opcional).
+# Formatos suportados pela Raylib: .wav, .ogg, .mp3
+# Carregue com LoadSound("assets/sounds/jump.wav") e PlaySound(s).
+# Lembre-se de InitAudioDevice() no inicio do main.

@@ -1,0 +1,3 @@
+# Pasta para spritesheets dos atletas e blocos.
+# Sugestao: PNG de 16x16 ou 32x32 por sprite.
+# Carregue com LoadTexture("assets/sprites/atleta.png") da Raylib.
