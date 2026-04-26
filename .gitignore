@@ -1,0 +1,12 @@
+# Ignorar configurações locais do VS Code
+.vscode/
+
+# Ignorar arquivos temporários e binários
+*.o
+*.exe
+*.out
+build/
+
+# Ignorar arquivos de sistema
+.DS_Store
+Thumbs.db
