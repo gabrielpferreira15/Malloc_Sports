@@ -118,7 +118,7 @@
 /* TODO: typedef struct Obstáculo { ... } Obstáculo; */
 
 
-/* TODO: protótipos das funções criar_*/destruir_* */
+/* TODO: protótipos das funções criar_ destruir_ */
 
 
 /* TODO: feche o header guard com #endif */
