@@ -27,7 +27,7 @@ ifeq ($(OS),Windows_NT)
 # Se você instalou em outro lugar, ajuste RAYLIB_PATH abaixo.
 RAYLIB_PATH ?= C:/raylib/raylib
 
-CFLAGS  = -Wall -Wextra -std=c11 -I"$(RAYLIB_PATH)/src"
+CFLAGS  = -Wall -Wextra -std=c11 -IInclude -I"$(RAYLIB_PATH)/src"
 LDFLAGS = -L"$(RAYLIB_PATH)/src" -lraylib -lopengl32 -lgdi32 -lwinmm -lm
 
 EXE_EXT = .exe
@@ -36,7 +36,7 @@ OBJ     = $(SRC:.c=.o)
 else
 # ---------- LINUX / macOS ----------
 # pkg-config descobre as flags certas automaticamente.
-CFLAGS  = -Wall -Wextra -std=c11 `pkg-config --cflags raylib`
+CFLAGS  = -Wall -Wextra -std=c11 -IInclude `pkg-config --cflags raylib`
 LDFLAGS = `pkg-config --libs raylib` -lm
 
 EXE_EXT =
