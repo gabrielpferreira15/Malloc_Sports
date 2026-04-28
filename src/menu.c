@@ -46,79 +46,184 @@
  *   No DRAW: itera sobre as opções; pinta a opcao_selecionada
  *   com cor diferente.
  */ 
-typedef enum {
-    CENA_MENU,
-    CENA_PONG,
-    CENA_RESULTADO,
-    CENA_SAIR
-} Cena;
 
 #include "raylib.h"
+#include "menu.h"
+#include "cenas.h"
 
-static bool ButtonClicked(Rectangle rect)
-{
-    return CheckCollisionPointRec(GetMousePosition(), rect) &&
-        IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+/* ------------------------------------------------------------------ */
+/*  Helpers de UI                                                      */
+/* ------------------------------------------------------------------ */
+
+// Retorna true se o mouse está sobre o retângulo e o botão foi solto. 
+static bool botao_clicado(Rectangle r) {
+    return CheckCollisionPointRec(GetMousePosition(), r)
+        && IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
 }
 
-static void DrawMenuButton(Rectangle rect, const char *label, bool active)
-{
-    bool hover = CheckCollisionPointRec(GetMousePosition(), rect);
+// Desenha um botão arredondado.
+// highlighted == true → cor de destaque (amarelo). 
+static void desenhar_botao(Rectangle r, const char *label, bool highlighted) {
+    bool hover = CheckCollisionPointRec(GetMousePosition(), r);
 
-    Color fill = active ? (hover ? DARKBLUE : BLUE)
-                        : (hover ? DARKGRAY : GRAY);
+    Color fundo;
+    if (highlighted)
+        fundo = hover ? (Color){220, 180, 0, 255} : (Color){255, 210, 0, 255};
+    else
+        fundo = hover ? (Color){70, 70, 70, 255} : (Color){45, 45, 45, 255};
 
-    DrawRectangleRounded(rect, 0.2f, 12, fill);
-    DrawRectangleRoundedLines(rect, 0.2f, 12, RAYWHITE);
+    DrawRectangleRounded(r, 0.25f, 12, fundo);
+    DrawRectangleRoundedLines(r, 0.25f, 12, RAYWHITE);
 
-    int fontSize = 28;
-    int textWidth = MeasureText(label, fontSize);
-
+    int fs = 28;
+    int tw = MeasureText(label, fs);
+    Color cor_texto = highlighted ? BLACK : RAYWHITE;
     DrawText(label,
-            (int)(rect.x + rect.width/2 - textWidth/2),
-            (int)(rect.y + rect.height/2 - fontSize/2 - 4),
-            fontSize,
-            RAYWHITE);
+            (int)(r.x + r.width  / 2 - tw / 2),
+            (int)(r.y + r.height / 2 - fs / 2),
+            fs, cor_texto);
 }
 
-Cena menu_principal(void)
-{
-    const int screenWidth = 1280;
-    const int screenHeight = 720;
+/* ------------------------------------------------------------------ */
+/*  tela_menu_principal                                               */
+/* ------------------------------------------------------------------ */
 
-    InitWindow(screenWidth, screenHeight, "Malloc Sports");
-    SetTargetFPS(60);
+Cena tela_menu_principal(void) {
+    const int W = GetScreenWidth();
+    const int H = GetScreenHeight();
 
-    bool running = true;
+    // Botões centralizados verticalmente 
+    float bx  = W / 2.0f - 180;
+    Rectangle btn_jogar = { bx, H / 2.0f - 60, 360, 60 };
+    Rectangle btn_sair  = { bx, H / 2.0f + 20,  360, 60 };
 
-    Rectangle btnPlay     = { screenWidth/2.0f - 180, 280, 360, 60 };
-    Rectangle btnSettings = { screenWidth/2.0f - 180, 360, 360, 60 };
-    Rectangle btnExit     = { screenWidth/2.0f - 180, 440, 360, 60 };
+    while (!WindowShouldClose()) {
+        // ----- INPUT ----- 
+        if (botao_clicado(btn_jogar)) return CENA_PONG;
+        if (botao_clicado(btn_sair))  return CENA_SAIR;
+        if (IsKeyPressed(KEY_ESCAPE)) return CENA_SAIR;
 
-    while (running && !WindowShouldClose())
-    {
-        if (ButtonClicked(btnExit) || IsKeyPressed(KEY_ESCAPE))
-            running = false;
-
+        // ----- DRAW ----- 
         BeginDrawing();
-        ClearBackground((Color){ 18, 22, 35, 255 });
+            ClearBackground((Color){18, 22, 35, 255});
 
-        DrawText("MALLOC SPORTS",
-                screenWidth/2 - MeasureText("MALLOC SPORTS", 56)/2,
-                90, 56, RAYWHITE);
+            // Título 
+            const char *titulo = "MALLOC SPORTS";
+            int ts = 64;
+            DrawText(titulo,
+                    W / 2 - MeasureText(titulo, ts) / 2,
+                    H / 2 - 200, ts, RAYWHITE);
 
-        DrawText("Mini games esportivos multiplayer",
-                screenWidth/2 - MeasureText("Mini games esportivos multiplayer", 24)/2,
-                150, 24, LIGHTGRAY);
+            // Subtítulo
+            const char *sub = "Minigames esportivos multiplayer";
+            DrawText(sub,
+                    W / 2 - MeasureText(sub, 22) / 2,
+                    H / 2 - 120, 22, LIGHTGRAY);
 
-        DrawMenuButton(btnPlay, "Jogar", false);
-        DrawMenuButton(btnSettings, "Configuracoes", false);
-        DrawMenuButton(btnExit, "Sair", true);
+            // Linha decorativa
+            DrawLine(W / 2 - 200, H / 2 - 90, W / 2 + 200, H / 2 - 90,
+                    (Color){80, 80, 80, 200});
+
+            desenhar_botao(btn_jogar, "Jogar",  true);
+            desenhar_botao(btn_sair,  "Sair",   false);
+
+            // Dica de controles
+            DrawText("Controles:  P1 = W/S     P2 = Setas",
+                    W / 2 - MeasureText("Controles:  P1 = W/S     P2 = Setas", 18) / 2,
+                    H - 40, 18, DARKGRAY);
 
         EndDrawing();
     }
 
-    CloseWindow();
+    return CENA_SAIR;
+}
+
+/* ------------------------------------------------------------------ */
+/*  tela_resultado                                                    */
+/* ------------------------------------------------------------------ */
+Cena tela_resultado(ResultadoPartida r) {
+    const int W = GetScreenWidth();
+    const int H = GetScreenHeight();
+
+    float bx = W / 2.0f - 180;
+    Rectangle btn_revanche = { bx, H / 2.0f + 40,  360, 60 };
+    Rectangle btn_menu     = { bx, H / 2.0f + 120, 360, 60 };
+
+    // Mensagem do vencedor 
+    const char *msg_venc = (r.vencedor == 1) ? "Jogador 1 venceu!" : "Jogador 2 venceu!";
+    
+    // Placar formatado
+    char placar[32];
+    TextFormat("%d  x  %d", r.pontos_p1, r.pontos_p2);
+    // TextFormat usa buffer interno — copiamos manualmente 
+    int n = 0;
+    const char *fmt = TextFormat("%d  x  %d", r.pontos_p1, r.pontos_p2);
+    while (fmt[n] && n < 31) { placar[n] = fmt[n]; n++; }
+    placar[n] = '\0';
+
+    while (!WindowShouldClose()) {
+        // ----- INPUT ----- 
+        if (botao_clicado(btn_revanche) || IsKeyPressed(KEY_ENTER))
+            return CENA_PONG;
+        if (botao_clicado(btn_menu) || IsKeyPressed(KEY_ESCAPE))
+            return CENA_MENU;
+
+        // ----- DRAW ----- 
+        BeginDrawing();
+            ClearBackground(BLACK);
+
+            // Faixa superior colorida (amarelo para o vencedor) 
+            DrawRectangle(0, 0, W, 8,
+                        (Color){255, 210, 0, 255});
+
+            // Nome do vencedor */
+            int mv = 52;
+            DrawText(msg_venc,
+                    W / 2 - MeasureText(msg_venc, mv) / 2,
+                    H / 2 - 140, mv, YELLOW);
+
+            // Placar */
+            const char *label_p1 = "P1";
+            const char *label_p2 = "P2";
+            int pts_fs = 80;
+            int label_fs = 24;
+
+            // P1
+            DrawText(label_p1,
+                    W / 2 - 140 - MeasureText(label_p1, label_fs) / 2,
+                    H / 2 - 60, label_fs, LIGHTGRAY);
+            DrawText(TextFormat("%d", r.pontos_p1),
+                    W / 2 - 140 - MeasureText("0", pts_fs) / 2,
+                    H / 2 - 30, pts_fs,
+                    r.vencedor == 1 ? YELLOW : GRAY);
+
+            // Separador
+            DrawText("x",
+                    W / 2 - MeasureText("x", pts_fs) / 2,
+                    H / 2 - 30, pts_fs, DARKGRAY);
+
+            // P2
+            DrawText(label_p2,
+                    W / 2 + 140 - MeasureText(label_p2, label_fs) / 2,
+                    H / 2 - 60, label_fs, LIGHTGRAY);
+
+            DrawText(TextFormat("%d", r.pontos_p2),
+                    W / 2 + 140 - MeasureText("0", pts_fs) / 2,
+                    H / 2 - 30, pts_fs,
+                    r.vencedor == 2 ? YELLOW : GRAY);
+
+            // Botões
+            desenhar_botao(btn_revanche, "Revanche",      true);
+            desenhar_botao(btn_menu,     "Voltar ao Menu", false);
+
+            // Dica de teclado
+            DrawText("ENTER = Revanche     ESC = Menu",
+                    W / 2 - MeasureText("ENTER = Revanche     ESC = Menu", 18) / 2,
+                    H - 40, 18, DARKGRAY);
+
+        EndDrawing();
+    }
+
     return CENA_SAIR;
 }
 
@@ -132,11 +237,7 @@ Cena menu_principal(void)
  *   --- tela_selecao_minigame ---
  *   3 opções lado a lado (Corrida de Ponteiros, Pong da Memória, Estouro de Pilha).
  *   KEY_LEFT / KEY_RIGHT muda card; ENTER inicia.
- *
- *   --- tela_resultado ---
- *   Mostra "VENCEDOR: JOGADOR 1" gigante, placar parcial,
- *   "Aperte ENTER para continuar".
- *
+
  *   --- tela_campeonato ---
  *   Animação de confete (várias partículas pulando) usando
  *   um array de 50-100 estruturas Particula simples — pode
@@ -170,18 +271,9 @@ Cena menu_principal(void)
  *     }
  *     strcpy(nome_saida, nome);
  *
- * COMO TESTAR
- *   1. Faça CADA tela como uma simples DrawText("nome da tela")
- *      e ENTER avançando para a próxima.
- *   2. Quando a navegação toda funcionar, melhore o visual.
- *
  * ATENÇÃO
  *   - Cada tela deve responder a KEY_ESCAPE pra evitar que o
  *     jogador fique preso.
- *   - Use Color do raylib pras cores. Sugestao de paleta no
- *     GDD: ciano (SKYBLUE) e amarelo (YELLOW) sobre BLACK.
  *   - GetCharPressed devolve 0 quando não há tecla — sempre
  *     teste num while pra capturar várias teclas no mesmo frame.
  * ============================================================ */
-
-/* TODO: includes + implementação das 6 telas */
