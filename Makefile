@@ -42,14 +42,14 @@ ifeq ($(OS),Windows_NT)
 	)
 
 	ifeq ($(RAYLIB_GCC),)
-		$(error Nao encontrei gcc do bundle da Raylib. Ajuste RAYLIB_PATH ou defina RAYLIB_GCC=C:/.../gcc.exe)
+		$(error Não foi possível encontrar o gcc do bundle da Raylib. Por favor, ajuste RAYLIB_PATH manualmente ou defina RAYLIB_GCC=C:/.../gcc.exe)
 	endif
 
 	CC := $(RAYLIB_GCC)
 	TOOLCHAIN_BIN := $(dir $(RAYLIB_GCC))
 
 	ifeq ($(RAYLIB_LIB_FILE),)
-		$(error Nao encontrei libraylib.a. Ajuste RAYLIB_PATH ou instale a Raylib.)
+		$(error Não foi possível encontrar o libraylib.a. Por favor, ajuste RAYLIB_PATH manualmente ou instale o Raylib.)
 	endif
 
 	RAYLIB_LIB_DIR := $(dir $(RAYLIB_LIB_FILE))
