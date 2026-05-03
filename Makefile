@@ -22,44 +22,72 @@ SRC     = $(wildcard src/*.c)
 TARGET  = malloc_sports
 
 ifeq ($(OS),Windows_NT)
-# ---------- WINDOWS (PowerShell / cmd, com mingw-w64) ----------
-# Caminho onde a Raylib oficial pra Windows costuma ser instalada.
-# Se você instalou em outro lugar, ajuste RAYLIB_PATH abaixo.
-RAYLIB_PATH ?= C:/raylib/raylib
+	# ---------- WINDOWS (PowerShell / cmd, com mingw-w64) ----------
+	# Caminho onde a Raylib oficial pra Windows costuma ser instalada.
+	# Se você instalou em outro lugar, ajuste RAYLIB_PATH abaixo.
+	RAYLIB_PATH ?= C:/raylib/raylib
 
-CFLAGS  = -Wall -Wextra -std=c11 -IInclude -I"$(RAYLIB_PATH)/src"
-LDFLAGS = -L"$(RAYLIB_PATH)/src" -lraylib -lopengl32 -lgdi32 -lwinmm -lm
+	# Busca automática pelo libraylib.a em locais comuns
+	RAYLIB_LIB_FILE := $(firstword \
+		$(wildcard C:/raylib/raylib/src/libraylib.a) \
+		$(wildcard C:/raylib/w64devkit/lib/libraylib.a) \
+		$(wildcard $(RAYLIB_PATH)/src/libraylib.a) \
+	)
 
-EXE_EXT = .exe
-RM      = del /Q
-OBJ     = $(SRC:.c=.o)
+	# Busca automática pelo gcc do bundle do Raylib 
+	RAYLIB_GCC := $(firstword \
+		$(wildcard $(RAYLIB_PATH)/mingw/bin/gcc.exe) \
+		$(wildcard $(RAYLIB_PATH)/w64devkit/bin/gcc.exe) \
+		$(wildcard C:/raylib/w64devkit/bin/gcc.exe) \
+	)
+
+	ifeq ($(RAYLIB_GCC),)
+		$(error Nao encontrei gcc do bundle da Raylib. Ajuste RAYLIB_PATH ou defina RAYLIB_GCC=C:/.../gcc.exe)
+	endif
+
+	CC := $(RAYLIB_GCC)
+	TOOLCHAIN_BIN := $(dir $(RAYLIB_GCC))
+
+	ifeq ($(RAYLIB_LIB_FILE),)
+		$(error Nao encontrei libraylib.a. Ajuste RAYLIB_PATH ou instale a Raylib.)
+	endif
+
+	RAYLIB_LIB_DIR := $(dir $(RAYLIB_LIB_FILE))
+
+	CFLAGS  = -Wall -Wextra -std=c11 -IInclude -I"$(RAYLIB_PATH)/src" -B"$(TOOLCHAIN_BIN)"
+	LDFLAGS = -L"$(RAYLIB_LIB_DIR)" -B"$(TOOLCHAIN_BIN)" -lraylib -lopengl32 -lgdi32 -lwinmm -lm
+
+	EXE_EXT = .exe
+	RM      = del /Q
+	OBJ     = $(SRC:.c=.o)
+
 else
-# ---------- LINUX / macOS ----------
-# pkg-config descobre as flags certas automaticamente.
-CFLAGS  = -Wall -Wextra -std=c11 -IInclude `pkg-config --cflags raylib`
-LDFLAGS = `pkg-config --libs raylib` -lm
+	# ---------- LINUX / macOS ----------
+	# pkg-config descobre as flags certas automaticamente.
+	CFLAGS  = -Wall -Wextra -std=c11 -IInclude `pkg-config --cflags raylib`
+	LDFLAGS = `pkg-config --libs raylib` -lm
 
-EXE_EXT =
-RM      = rm -f
-OBJ     = $(SRC:.c=.o)
-endif
+	EXE_EXT =
+	RM      = rm -f
+	OBJ     = $(SRC:.c=.o)
+	endif
 
-OUT = $(TARGET)$(EXE_EXT)
+	OUT = $(TARGET)$(EXE_EXT)
 
-all: $(OUT)
+	all: $(OUT)
 
-$(OUT): $(OBJ)
-	$(CC) $(OBJ) -o $@ $(LDFLAGS)
+	$(OUT): $(OBJ)
+		$(CC) $(OBJ) -o $@ $(LDFLAGS)
 
-# Regra padrão do make: como compilar .c em .o
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	# Regra padrão do make: como compilar .c em .o
+	%.o: %.c
+		$(CC) $(CFLAGS) -c $< -o $@
 
-clean:
-ifeq ($(OS),Windows_NT)
-	-$(RM) src\*.o $(OUT) 2> nul
-else
-	$(RM) $(OBJ) $(OUT)
-endif
+	clean:
+	ifeq ($(OS),Windows_NT)
+		-$(RM) src\*.o $(OUT) 2> nul
+	else
+		$(RM) $(OBJ) $(OUT)
+	endif
 
-.PHONY: all clean
+	.PHONY: all clean
