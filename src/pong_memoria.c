@@ -12,7 +12,7 @@
 #define VEL_BOLA_Y_INICIAL  220.0f
 #define VEL_MAX_X           800.0f
 #define VEL_MAX_Y_ANGULO    500.0f
-#define ACELERACAO_POR_PT     1.05f
+#define ACELERACAO_POR_PT     1.1f
 #define PONTOS_PRA_VENCER     7
 #define POWERUP_INTERVALO     8.0f
 #define BOOST_DURACAO         3.0f
@@ -90,12 +90,12 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
     // =========================
     // NOVO SISTEMA DE REBATES
     // =========================
-    int contador_rebates = 0;
+    int contador_rebates = 0; //*temporário* (apenas para visualizar o aumento da velocidade com as rebatidas)
 
     float velocidade_raquete = VEL_RAQUETE;
 
-    const float ACELERACAO_REBATE_BOLA = 15.0f;
-    const float ACELERACAO_REBATE_RAQUETE = 8.0f;
+    const float ACELERACAO_REBATE_BOLA = 50.0f;
+    const float ACELERACAO_REBATE_RAQUETE = 15.0f;
 
     const int LIMITE_REBATES = 20;
 
