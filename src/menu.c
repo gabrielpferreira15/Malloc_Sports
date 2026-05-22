@@ -97,15 +97,20 @@ Cena tela_menu_principal(void) {
     Rectangle btn_jogar = { bx, H / 2.0f - 60, 360, 60 };
     Rectangle btn_sair  = { bx, H / 2.0f + 20,  360, 60 };
 
+    Cena cena_atual = CENA_MENU;
+
     while (!WindowShouldClose()) {
+        Cena prox_cena = cena_atual;
+
         // ----- INPUT ----- 
-        if (botao_clicado(btn_jogar)) return CENA_PONG;
-        if (botao_clicado(btn_sair))  return CENA_SAIR;
-        if (IsKeyPressed(KEY_ESCAPE)) return CENA_SAIR;
+        if (botao_clicado(btn_jogar)) prox_cena = CENA_SELECAO_MODO;
+        else if (botao_clicado(btn_sair))  prox_cena = CENA_SAIR;
+        else if (IsKeyPressed(KEY_ESCAPE)) prox_cena = CENA_SAIR;
 
         // ----- DRAW ----- 
         BeginDrawing();
             ClearBackground((Color){18, 22, 35, 255});
+
 
             // Título 
             const char *titulo = "MALLOC SPORTS";
@@ -133,8 +138,103 @@ Cena tela_menu_principal(void) {
                     H - 40, 18, DARKGRAY);
 
         EndDrawing();
+        
+        if (prox_cena != cena_atual) return prox_cena;
     }
 
+    return CENA_SAIR;
+}
+
+/* ------------------------------------------------------------------ */
+/*  tela_selecao_modo                                                 */
+/* ------------------------------------------------------------------ */
+Cena tela_selecao_modo(EstadoTorneio *t) {
+    const int W = GetScreenWidth();
+    const int H = GetScreenHeight();
+
+    float bx = W / 2.0f - 180;
+    Rectangle btn_avulso  = { bx, H / 2.0f - 60, 360, 60 };
+    Rectangle btn_torneio = { bx, H / 2.0f + 20, 360, 60 };
+
+    Cena cena_atual = CENA_SELECAO_MODO;
+
+    while (!WindowShouldClose()) {
+        Cena prox_cena = cena_atual;
+
+        if (botao_clicado(btn_avulso)) {
+            prox_cena = CENA_SELECAO_MINIGAME;
+        }
+        else if (botao_clicado(btn_torneio)) {
+            iniciar_torneio(t);
+            prox_cena = proxima_cena_torneio(t);
+        }
+        else if (IsKeyPressed(KEY_ESCAPE)) {
+            prox_cena = CENA_MENU;
+        }
+
+        BeginDrawing();
+        ClearBackground((Color){18, 22, 35, 255});
+        
+        DrawText("SELECIONE O MODO", W/2 - MeasureText("SELECIONE O MODO", 40)/2, H/2 - 150, 40, RAYWHITE);
+        
+        desenhar_botao(btn_avulso, "Minigame Único", true);
+        desenhar_botao(btn_torneio, "Torneio", false);
+
+        DrawText("ESC = Voltar", W/2 - MeasureText("ESC = Voltar", 18)/2, H - 40, 18, DARKGRAY);
+
+        EndDrawing();
+        
+        if (prox_cena != cena_atual) return prox_cena;
+    }
+    return CENA_SAIR;
+}
+
+/* ------------------------------------------------------------------ */
+/*  tela_selecao_minigame                                             */
+/* ------------------------------------------------------------------ */
+Cena tela_selecao_minigame(void) {
+    const int W = GetScreenWidth();
+    const int H = GetScreenHeight();
+
+    int opcao_selecionada = 0; // 0=Corrida, 1=Pong
+    Cena cena_atual = CENA_SELECAO_MINIGAME;
+    
+    while (!WindowShouldClose()) {
+        Cena prox_cena = cena_atual;
+
+        if (IsKeyPressed(KEY_RIGHT)) {
+            opcao_selecionada = (opcao_selecionada + 1) % 2;
+        }
+        if (IsKeyPressed(KEY_LEFT)) {
+            opcao_selecionada = (opcao_selecionada - 1 + 2) % 2; 
+        }
+        if (IsKeyPressed(KEY_ENTER)) {
+            if (opcao_selecionada == 0) prox_cena = CENA_CORRIDA;
+            if (opcao_selecionada == 1) prox_cena = CENA_PONG;
+        }
+        if (IsKeyPressed(KEY_ESCAPE)) prox_cena = CENA_SELECAO_MODO;
+
+        Rectangle card_corrida = { W / 2.0f - 240, H / 2.0f - 100, 200, 200 };
+        Rectangle card_pong    = { W / 2.0f + 40,  H / 2.0f - 100, 200, 200 };
+
+        if (botao_clicado(card_corrida)) prox_cena = CENA_CORRIDA;
+        else if (botao_clicado(card_pong)) prox_cena = CENA_PONG;
+
+        BeginDrawing();
+        ClearBackground((Color){18, 22, 35, 255});
+
+        DrawText("SELECIONE O JOGO", W/2 - MeasureText("SELECIONE O JOGO", 40)/2, H/2 - 200, 40, RAYWHITE);
+
+        desenhar_botao(card_corrida, "Corrida", opcao_selecionada == 0);
+        desenhar_botao(card_pong, "Pong", opcao_selecionada == 1);
+
+        DrawText("USE AS SETAS E ENTER", W/2 - MeasureText("USE AS SETAS E ENTER", 20)/2, H/2 + 150, 20, LIGHTGRAY);
+        DrawText("ESC = Voltar", W/2 - MeasureText("ESC = Voltar", 18)/2, H - 40, 18, DARKGRAY);
+
+        EndDrawing();
+
+        if (prox_cena != cena_atual) return prox_cena;
+    }
     return CENA_SAIR;
 }
 
@@ -150,39 +250,64 @@ Cena tela_resultado(ResultadoPartida r) {
     Rectangle btn_menu     = { bx, H / 2.0f + 120, 360, 60 };
 
     // Mensagem do vencedor 
-    const char *msg_venc = (r.vencedor == 1) ? "Jogador 1 venceu!" : "Jogador 2 venceu!";
+    const char *msg_venc;
+    if (r.vencedor == 1) msg_venc = "Jogador 1 venceu!";
+    else if (r.vencedor == 2) msg_venc = "Jogador 2 venceu!";
+    else msg_venc = "Empate!";
+
+    if (r.torneio_final) {
+        if (r.vencedor == 1) msg_venc = "Jogador 1 venceu o Torneio!";
+        else if (r.vencedor == 2) msg_venc = "Jogador 2 venceu o Torneio!";
+        else msg_venc = "Torneio Empatado!";
+    }
+
+    // Texto do botão principal (destaque)
+    const char *texto_btn_principal = "Revanche";
+    if (r.torneio_final) texto_btn_principal = "Voltar ao Menu";
+    else if (r.em_torneio) texto_btn_principal = "Próximo Jogo";
     
     // Placar formatado
     char placar[32];
-    TextFormat("%d  x  %d", r.pontos_p1, r.pontos_p2);
-    // TextFormat usa buffer interno — copiamos manualmente 
     int n = 0;
     const char *fmt = TextFormat("%d  x  %d", r.pontos_p1, r.pontos_p2);
     while (fmt[n] && n < 31) { placar[n] = fmt[n]; n++; }
     placar[n] = '\0';
 
+    Cena cena_atual = CENA_RESULTADO;
+
     while (!WindowShouldClose()) {
+        Cena prox_cena = cena_atual;
+
         // ----- INPUT ----- 
-        if (botao_clicado(btn_revanche) || IsKeyPressed(KEY_ENTER))
-            return CENA_PONG;
-        if (botao_clicado(btn_menu) || IsKeyPressed(KEY_ESCAPE))
-            return CENA_MENU;
+        if (botao_clicado(btn_revanche) || IsKeyPressed(KEY_ENTER)) {
+            if (r.torneio_final) prox_cena = CENA_MENU;
+            else if (r.em_torneio) prox_cena = CENA_PONG; // Retorna PONG genérico para sinalizar 'Próximo', o main decide
+            else prox_cena = r.ultimo_jogo; // Retorna o jogo que acabamos jogar
+        }
+        
+        if (!r.torneio_final) {
+            if (botao_clicado(btn_menu) || IsKeyPressed(KEY_ESCAPE))
+                prox_cena = CENA_MENU;
+        }
 
         // ----- DRAW ----- 
         BeginDrawing();
             ClearBackground(BLACK);
 
             // Faixa superior colorida (amarelo para o vencedor) 
-            DrawRectangle(0, 0, W, 8,
-                        (Color){255, 210, 0, 255});
+            DrawRectangle(0, 0, W, 8, (Color){255, 210, 0, 255});
 
-            // Nome do vencedor */
-            int mv = 52;
+            if (r.torneio_final) {
+                DrawText("RESULTADO DO TORNEIO", W / 2 - MeasureText("RESULTADO DO TORNEIO", 30) / 2, 40, 30, GOLD);
+            }
+
+            // Nome do vencedor 
+            int mv = 48;
             DrawText(msg_venc,
                     W / 2 - MeasureText(msg_venc, mv) / 2,
                     H / 2 - 140, mv, YELLOW);
 
-            // Placar */
+            // Placar 
             const char *label_p1 = "P1";
             const char *label_p2 = "P2";
             int pts_fs = 80;
@@ -213,64 +338,25 @@ Cena tela_resultado(ResultadoPartida r) {
                     r.vencedor == 2 ? YELLOW : GRAY);
 
             // Botões
-            desenhar_botao(btn_revanche, "Revanche",      true);
-            desenhar_botao(btn_menu,     "Voltar ao Menu", false);
-
-            // Dica de teclado
-            DrawText("ENTER = Revanche     ESC = Menu",
-                    W / 2 - MeasureText("ENTER = Revanche     ESC = Menu", 18) / 2,
-                    H - 40, 18, DARKGRAY);
+            desenhar_botao(btn_revanche, texto_btn_principal, true);
+            if (!r.torneio_final) {
+                desenhar_botao(btn_menu, "Voltar ao Menu", false);
+                DrawText("ENTER = Confirmar     ESC = Menu",
+                        W / 2 - MeasureText("ENTER = Confirmar     ESC = Menu", 18) / 2,
+                        H - 40, 18, DARKGRAY);
+            } else {
+                DrawText("ENTER = Confirmar", W / 2 - MeasureText("ENTER = Confirmar", 18) / 2, H - 40, 18, DARKGRAY);
+            }
 
         EndDrawing();
+        
+        if (prox_cena != cena_atual) return prox_cena;
     }
 
     return CENA_SAIR;
 }
 
-    /*
- *  --- tela_seleção_modo ---
- *  Opção entre "Minigame Único" e "Torneio".
- *  Ao clicar em "Minigame Único", vai pra tela_selecao_minigame.
- *  Ao clicar em "Torneio", incia o torneio pegando um dos minigames aleatoriamente e vai 
- *  escolhendo os próximos até passar por todos os jogos.
- *  
- *   --- tela_selecao_minigame ---
- *   3 opções lado a lado (Corrida de Ponteiros, Pong da Memória, Estouro de Pilha).
- *   KEY_LEFT / KEY_RIGHT muda card; ENTER inicia.
-
- *   --- tela_campeonato ---
- *   Animação de confete (várias partículas pulando) usando
- *   um array de 50-100 estruturas Particula simples — pode
- *   declarar a struct localmente neste arquivo:
- *
- *     typedef struct {
- *         float x, y;
- *         float vel_x, vel_y;
- *         Color cor;
- *     } Particula;
- *
- *     Particula confete[100];
- *     // inicialize cada uma com posição e velocidades aleatórias
- *
- *   Input do nome:
- *     char nome[16] = {0};
- *     int  pos = 0;
- *     while (loop) {
- *         int c = GetCharPressed();   // função da raylib
- *         while (c > 0) {
- *             if (pos < 15 && c >= 32 && c <= 125) {
- *                 nome[pos++] = (char)c;
- *                 nome[pos]   = '\0';
- *             }
- *             c = GetCharPressed();
- *         }
- *         if (IsKeyPressed(KEY_BACKSPACE) && pos > 0)
- *             nome[--pos] = '\0';
- *         if (IsKeyPressed(KEY_ENTER) && pos > 0)
- *             break;  // confirmou
- *     }
- *     strcpy(nome_saida, nome);
- *
+/*                                  
  * ATENÇÃO
  *   - Cada tela deve responder a KEY_ESCAPE pra evitar que o
  *     jogador fique preso.
