@@ -20,36 +20,37 @@
 #define MARGEM_RAQUETE        40
 
 typedef struct {
-    float x, y;
+    float x, y; // posição atual da bola
     float vel_x, vel_y;
     int   raio;
 } Bola;
 
 typedef struct {
-    float x, y;
+    float x, y; // posição atual da raquete
     int   tecla_cima;
     int   tecla_baixo;
 } Raquete;
 
 static float clampf(float v, float lo, float hi) {
-    if (v < lo) return lo;
-    if (v > hi) return hi;
+    if (v < lo) return lo; // retorna o limite minimo
+    if (v > hi) return hi; // retorna o limite maximo
     return v;
 }
 
 static int circulo_colidiu_retangulo(float cx, float cy, float r,
         float rx, float ry, float rw, float rh) {
-    float px = clampf(cx, rx, rx + rw);
-    float py = clampf(cy, ry, ry + rh);
-    float dx = cx - px, dy = cy - py;
-    return (dx * dx + dy * dy) <= (r * r);
+    float px = clampf(cx, rx, rx + rw); //ponto X da raquete mais proximo a bola
+    float py = clampf(cy, ry, ry + rh); //ponto Y da raquete mais proximo a bola
+    float dx = cx - px; //distancia entre os pontos X
+    float dy = cy - py; //distancia entre os pontos Y
+    return (dx * dx + dy * dy) <= (r * r); // retorna verdadeiro caso tenha tido colisao
 }
 
 static void resetar_bola(Bola *b, float vx, float vy) {
-    b->x     = LARGURA / 2.0f;
+    b->x     = LARGURA / 2.0f; // posição de retorno da bola
     b->y     = ALTURA  / 2.0f;
-    b->raio  = BOLA_RAIO;
-    b->vel_x = (GetRandomValue(0, 1) == 0) ?  vx : -vx;
+    b->raio  = BOLA_RAIO; // define o tamanho da bola
+    b->vel_x = (GetRandomValue(0, 1) == 0) ?  vx : -vx; // if/else
     b->vel_y = (GetRandomValue(0, 1) == 0) ?  vy : -vy;
 }
 
