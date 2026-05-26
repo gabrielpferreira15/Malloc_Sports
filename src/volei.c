@@ -57,7 +57,7 @@ typedef struct {
 } Bola;
 
 // ======================================================
-// FUNÇÕES
+// FUNÇÕES AUXILIARES
 // ======================================================
 
 float clampf(float valor, float min, float max)
@@ -182,7 +182,6 @@ void colisao_bola_cabeca(
 
         bola->vel_y = normal_y * forca;
 
-        // IMPULSO EXTRA PRA CIMA
         bola->vel_y -= 300;
     }
 }
@@ -191,7 +190,6 @@ void colisao_bola_cabeca(
 
 void colisao_bola_parede(Bola *bola)
 {
-    // Parede esquerda
     if (bola->x - bola->raio <= 0)
     {
         bola->x = bola->raio;
@@ -199,7 +197,6 @@ void colisao_bola_parede(Bola *bola)
         bola->vel_x *= -1;
     }
 
-    // Parede direita
     if (bola->x + bola->raio >= LARGURA)
     {
         bola->x = LARGURA - bola->raio;
@@ -207,7 +204,6 @@ void colisao_bola_parede(Bola *bola)
         bola->vel_x *= -1;
     }
 
-    // Teto
     if (bola->y - bola->raio <= 0)
     {
         bola->y = bola->raio;
@@ -251,46 +247,20 @@ void colisao_rede(Bola *bola)
         if (fabsf(dx) > fabsf(dy))
         {
             bola->vel_x *= -1;
-
-            if (dx > 0)
-                bola->x =
-                    rede.x + rede.width + bola->raio;
-            else
-                bola->x =
-                    rede.x - bola->raio;
         }
         else
         {
             bola->vel_y *= -1;
-
-            if (dy > 0)
-                bola->y =
-                    rede.y + rede.height + bola->raio;
-            else
-                bola->y =
-                    rede.y - bola->raio;
         }
     }
 }
 
 // ======================================================
-// MAIN
+// FUNÇÃO PRINCIPAL DO JOGO
 // ======================================================
 
-int main(void)
+int jogar_volei(int *pontos_p1, int *pontos_p2)
 {
-    InitWindow(
-        LARGURA,
-        ALTURA,
-        "Head Volleyball"
-    );
-
-    SetTargetFPS(60);
-
-    // ==================================================
-    // PLAYERS
-    // ==================================================
-
     Jogador p1 = {
 
         200,
@@ -323,37 +293,22 @@ int main(void)
         RED
     };
 
-    // ==================================================
-    // BALL
-    // ==================================================
-
     Bola bola;
 
     resetar_bola(&bola);
 
-    // ==================================================
-    // SCORE
-    // ==================================================
-
-    int pontos_p1 = 0;
-    int pontos_p2 = 0;
-
-    // ==================================================
-    // LOOP
-    // ==================================================
+    int pts1 = 0;
+    int pts2 = 0;
 
     while (
         !WindowShouldClose() &&
-        pontos_p1 < PONTOS_PARA_VENCER &&
-        pontos_p2 < PONTOS_PARA_VENCER
+        pts1 < PONTOS_PARA_VENCER &&
+        pts2 < PONTOS_PARA_VENCER
     )
     {
         float dt = GetFrameTime();
 
-        // ==============================================
-        // MOVIMENTO
-        // ==============================================
-
+        // PLAYER 1
         mover_jogador(
             &p1,
             KEY_A,
@@ -362,6 +317,7 @@ int main(void)
             dt
         );
 
+        // PLAYER 2
         mover_jogador(
             &p2,
             KEY_LEFT,
@@ -385,10 +341,7 @@ int main(void)
             LARGURA
         );
 
-        // ==============================================
         // BOLA
-        // ==============================================
-
         aplicar_gravidade_bola(&bola, dt);
 
         colisao_bola_parede(&bola);
@@ -399,24 +352,18 @@ int main(void)
 
         colisao_bola_cabeca(&bola, &p2);
 
-        // ==============================================
         // PONTO
-        // ==============================================
-
         if (bola.y + bola.raio >= CHAO_Y)
         {
             if (bola.x < LARGURA / 2.0f)
-                pontos_p2++;
+                pts2++;
             else
-                pontos_p1++;
+                pts1++;
 
             resetar_bola(&bola);
         }
 
-        // ==============================================
         // DRAW
-        // ==============================================
-
         BeginDrawing();
 
         ClearBackground((Color){135, 206, 235, 255});
@@ -429,7 +376,7 @@ int main(void)
             YELLOW
         );
 
-        // Chão areia
+        // Areia
         DrawRectangle(
             0,
             CHAO_Y,
@@ -447,7 +394,7 @@ int main(void)
             WHITE
         );
 
-        // Jogador 1 corpo
+        // PLAYER 1
         DrawRectangle(
             p1.x,
             p1.y + 30,
@@ -456,7 +403,6 @@ int main(void)
             p1.cor
         );
 
-        // Jogador 1 cabeça
         DrawCircle(
             p1.x + p1.largura / 2,
             p1.y + CABECA_RAIO,
@@ -464,7 +410,7 @@ int main(void)
             SKYBLUE
         );
 
-        // Jogador 2 corpo
+        // PLAYER 2
         DrawRectangle(
             p2.x,
             p2.y + 30,
@@ -473,7 +419,6 @@ int main(void)
             p2.cor
         );
 
-        // Jogador 2 cabeça
         DrawCircle(
             p2.x + p2.largura / 2,
             p2.y + CABECA_RAIO,
@@ -481,7 +426,7 @@ int main(void)
             PINK
         );
 
-        // Bola
+        // BOLA
         DrawCircle(
             bola.x,
             bola.y,
@@ -489,9 +434,9 @@ int main(void)
             WHITE
         );
 
-        // Placar
+        // PLACAR
         DrawText(
-            TextFormat("%d", pontos_p1),
+            TextFormat("%d", pts1),
             500,
             40,
             60,
@@ -499,79 +444,21 @@ int main(void)
         );
 
         DrawText(
-            TextFormat("%d", pontos_p2),
+            TextFormat("%d", pts2),
             730,
             40,
             60,
             BLACK
         );
 
-        // Controles
-        DrawText(
-            "P1: A D W",
-            40,
-            40,
-            24,
-            BLACK
-        );
-
-        DrawText(
-            "P2: <- -> ^",
-            980,
-            40,
-            24,
-            BLACK
-        );
-
         EndDrawing();
     }
 
-    // ==================================================
-    // TELA FINAL
-    // ==================================================
+    *pontos_p1 = pts1;
+    *pontos_p2 = pts2;
 
-    while (!WindowShouldClose())
-    {
-        BeginDrawing();
-
-        ClearBackground(BLACK);
-
-        if (pontos_p1 > pontos_p2)
-        {
-            DrawText(
-                "PLAYER 1 VENCEU!",
-                380,
-                300,
-                50,
-                BLUE
-            );
-        }
-        else
-        {
-            DrawText(
-                "PLAYER 2 VENCEU!",
-                380,
-                300,
-                50,
-                RED
-            );
-        }
-
-        DrawText(
-            "ESC para sair",
-            500,
-            400,
-            30,
-            WHITE
-        );
-
-        EndDrawing();
-
-        if (IsKeyPressed(KEY_ESCAPE))
-            break;
-    }
-
-    CloseWindow();
-
-    return 0;
+    return
+        (pts1 >= PONTOS_PARA_VENCER)
+        ? 1
+        : 2;
 }
