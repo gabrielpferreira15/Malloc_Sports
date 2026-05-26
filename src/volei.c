@@ -1,314 +1,577 @@
 #include "raylib.h"
-#include <stdlib.h>
-#include <stdbool.h>
 #include <math.h>
+#include <stdbool.h>
 
-// Configurações da Tela
-#define LARGURA       800
-#define ALTURA        450
+// ======================================================
+// CONFIG
+// ======================================================
 
-// Configurações da Matriz do Cenário
-#define LINHAS        9
-#define COLUNAS       16
-#define TILE_SIZE     50 // Cada bloco tem 50x50 pixels (16x50 = 800px de largura)
+#define LARGURA 1280
+#define ALTURA 720
 
-// Tipos de blocos na Matriz
-#define AR            0
-#define AREIA         1
-#define REDE          2
+#define CHAO_Y 620
 
-// Física
-#define GRAVIDADE     980.0f
-#define FORCA_PULO    -500.0f
-#define VEL_JOGADOR   300.0f
+#define GRAVIDADE 1200.0f
 
-/* ------------------------------------------------------------------ */
-/* 1. STRUCTS (Estruturas)                                           */
-/* ------------------------------------------------------------------ */
+#define VELOCIDADE_JOGADOR 420.0f
+#define FORCA_PULO 650.0f
+
+#define JOGADOR_W 60
+#define JOGADOR_H 120
+
+#define CABECA_RAIO 35
+
+#define BOLA_RAIO 18
+
+#define PONTOS_PARA_VENCER 7
+
+// ======================================================
+// STRUCTS
+// ======================================================
 
 typedef struct {
-    Vector2 pos;
-    Vector2 vel;
-    float raio;
-} Bola;
 
-typedef struct {
-    Vector2 pos;
-    Vector2 vel;
-    float largura, altura;
-    int pontos;
-    int tecla_esq, tecla_dir, tecla_pulo;
+    float x, y;
+
+    float vel_x;
+    float vel_y;
+
+    float largura;
+    float altura;
+
+    bool no_chao;
+
     Color cor;
+
 } Jogador;
 
-// Estrutura para as Partículas (Lista Encadeada)
-typedef struct Particula {
-    Vector2 pos;
-    Vector2 vel;
-    float vida;       // Tempo de vida restante em segundos
-    Color cor;
-} Particula;
+typedef struct {
 
-// Nó da Lista Encadeada
-typedef struct Node {
-    Particula p;
-    struct Node* proximo;
-} Node;
+    float x, y;
 
-/* ------------------------------------------------------------------ */
-/* 2. ALOCAÇÃO DINÂMICA E LISTAS ENCADEADAS                          */
-/* ------------------------------------------------------------------ */
+    float vel_x;
+    float vel_y;
 
-// Função para adicionar uma nova partícula na lista (MALLOC)
-void adicionar_particula(Node** topo, Vector2 pos, Vector2 vel, Color cor) {
-    Node* novo_nodo = (Node*)malloc(sizeof(Node));
-    if (novo_nodo == NULL) return; // Proteção caso falte memória
+    float raio;
 
-    novo_nodo->p.pos = pos;
-    novo_nodo->p.vel = vel;
-    novo_nodo->p.vida = 0.5f; // Meio segundo de vida
-    novo_nodo->p.cor = cor;
-    
-    novo_nodo->proximo = *topo;
-    *topo = novo_nodo;
+} Bola;
+
+// ======================================================
+// FUNÇÕES
+// ======================================================
+
+float clampf(float valor, float min, float max)
+{
+    if (valor < min) return min;
+    if (valor > max) return max;
+
+    return valor;
 }
 
-// Função para atualizar e limpar partículas mortas (FREE)
-void atualizar_e_desenhar_particulas(Node** topo, float dt) {
-    Node* atual = *topo;
-    Node* anterior = NULL;
+// ------------------------------------------------------
 
-    while (atual != NULL) {
-        // Atualiza física da partícula
-        atual->p.pos.x += atual->p.vel.x * dt;
-        atual->p.pos.y += atual->p.vel.y * dt;
-        atual->p.vida -= dt;
+void resetar_bola(Bola *bola)
+{
+    bola->x = LARGURA / 2.0f;
+    bola->y = 200;
 
-        // Desenha a partícula
-        DrawCircleV(atual->p.pos, 3, atual->p.cor);
+    bola->vel_x =
+        (GetRandomValue(0, 1) == 0)
+        ? 300
+        : -300;
 
-        // Se a partícula morreu, remove da lista encadeada e libera memória
-        if (atual->p.vida <= 0) {
-            Node* deletar = atual;
-            if (anterior == NULL) {
-                *topo = atual->proximo;
-                atual = *topo;
-            } else {
-                anterior->proximo = atual->proximo;
-                atual = atual->proximo;
-            }
-            free(deletar); // Libera a memória dinamicamente alocada
-        } else {
-            anterior = atual;
-            atual = atual->proximo;
+    bola->vel_y = -200;
+
+    bola->raio = BOLA_RAIO;
+}
+
+// ------------------------------------------------------
+
+void aplicar_gravidade_bola(Bola *bola, float dt)
+{
+    bola->vel_y += GRAVIDADE * dt;
+
+    bola->x += bola->vel_x * dt;
+    bola->y += bola->vel_y * dt;
+}
+
+// ------------------------------------------------------
+
+void aplicar_gravidade_jogador(Jogador *j, float dt)
+{
+    j->vel_y += GRAVIDADE * dt;
+
+    j->y += j->vel_y * dt;
+
+    if (j->y + j->altura >= CHAO_Y)
+    {
+        j->y = CHAO_Y - j->altura;
+
+        j->vel_y = 0;
+
+        j->no_chao = true;
+    }
+}
+
+// ------------------------------------------------------
+
+void mover_jogador(
+    Jogador *j,
+    int tecla_esquerda,
+    int tecla_direita,
+    int tecla_pulo,
+    float dt
+)
+{
+    j->vel_x = 0;
+
+    if (IsKeyDown(tecla_esquerda))
+        j->vel_x = -VELOCIDADE_JOGADOR;
+
+    if (IsKeyDown(tecla_direita))
+        j->vel_x = VELOCIDADE_JOGADOR;
+
+    j->x += j->vel_x * dt;
+
+    if (IsKeyPressed(tecla_pulo) && j->no_chao)
+    {
+        j->vel_y = -FORCA_PULO;
+
+        j->no_chao = false;
+    }
+}
+
+// ------------------------------------------------------
+
+void limitar_jogador(Jogador *j, float min_x, float max_x)
+{
+    j->x = clampf(
+        j->x,
+        min_x,
+        max_x - j->largura
+    );
+}
+
+// ------------------------------------------------------
+
+void colisao_bola_cabeca(
+    Bola *bola,
+    Jogador *j
+)
+{
+    float cabeca_x =
+        j->x + j->largura / 2.0f;
+
+    float cabeca_y =
+        j->y + CABECA_RAIO;
+
+    float dx = bola->x - cabeca_x;
+    float dy = bola->y - cabeca_y;
+
+    float distancia =
+        sqrtf(dx * dx + dy * dy);
+
+    if (distancia < bola->raio + CABECA_RAIO)
+    {
+        float normal_x = dx / distancia;
+        float normal_y = dy / distancia;
+
+        float forca = 700.0f;
+
+        bola->vel_x = normal_x * forca;
+
+        bola->vel_y = normal_y * forca;
+
+        // IMPULSO EXTRA PRA CIMA
+        bola->vel_y -= 300;
+    }
+}
+
+// ------------------------------------------------------
+
+void colisao_bola_parede(Bola *bola)
+{
+    // Parede esquerda
+    if (bola->x - bola->raio <= 0)
+    {
+        bola->x = bola->raio;
+
+        bola->vel_x *= -1;
+    }
+
+    // Parede direita
+    if (bola->x + bola->raio >= LARGURA)
+    {
+        bola->x = LARGURA - bola->raio;
+
+        bola->vel_x *= -1;
+    }
+
+    // Teto
+    if (bola->y - bola->raio <= 0)
+    {
+        bola->y = bola->raio;
+
+        bola->vel_y *= -1;
+    }
+}
+
+// ------------------------------------------------------
+
+void colisao_rede(Bola *bola)
+{
+    Rectangle rede = {
+
+        LARGURA / 2.0f - 5,
+        CHAO_Y - 220,
+
+        10,
+        220
+    };
+
+    float ponto_x =
+        clampf(
+            bola->x,
+            rede.x,
+            rede.x + rede.width
+        );
+
+    float ponto_y =
+        clampf(
+            bola->y,
+            rede.y,
+            rede.y + rede.height
+        );
+
+    float dx = bola->x - ponto_x;
+    float dy = bola->y - ponto_y;
+
+    if ((dx * dx + dy * dy) <= bola->raio * bola->raio)
+    {
+        if (fabsf(dx) > fabsf(dy))
+        {
+            bola->vel_x *= -1;
+
+            if (dx > 0)
+                bola->x =
+                    rede.x + rede.width + bola->raio;
+            else
+                bola->x =
+                    rede.x - bola->raio;
+        }
+        else
+        {
+            bola->vel_y *= -1;
+
+            if (dy > 0)
+                bola->y =
+                    rede.y + rede.height + bola->raio;
+            else
+                bola->y =
+                    rede.y - bola->raio;
         }
     }
 }
 
-// Limpa toda a lista antes de fechar o jogo para não dar Memory Leak
-void limpar_todas_particulas(Node* topo) {
-    while (topo != NULL) {
-        Node* aux = topo;
-        topo = topo->proximo;
-        free(aux);
-    }
-}
+// ======================================================
+// MAIN
+// ======================================================
 
-/* ------------------------------------------------------------------ */
-/* 3. FUNÇÃO PRINCIPAL DO JOGO                                       */
-/* ------------------------------------------------------------------ */
-
-int main(void) {
-    InitWindow(LARGURA, ALTURA, "Vôlei de Ponteiros - Estrutura de Dados");
-
-    // Ponteiro para o topo da lista encadeada de partículas
-    Node* lista_particulas = NULL;
-
-    /* -------------------------------------------------------------- */
-    /* MATRIZ DO CENÁRIO (Tilemap)                                   */
-    /* 0 = Ar, 1 = Areia (Chão), 2 = Rede                            */
-    /* -------------------------------------------------------------- */
-    int cenario[LINHAS][COLUNAS] = {
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0}, // Linha da Rede
-        {0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0}, // Linha da Rede
-        {0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0}, // Linha da Rede
-        {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}  // Chão de Areia
-    };
-
-    // Inicialização dos Jogadores (P1 na Esquerda, P2 na Direita)
-    Jogador p1 = {
-        .pos = { 150, 300 }, .vel = { 0, 0 }, .largura = 30, .altura = 60,
-        .tecla_esq = KEY_A, .tecla_dir = KEY_D, .tecla_pulo = KEY_W, .pontos = 0, .cor = SKYBLUE
-    };
-
-    Jogador p2 = {
-        .pos = { 620, 300 }, .vel = { 0, 0 }, .largura = 30, .altura = 60,
-        .tecla_esq = KEY_LEFT, .tecla_dir = KEY_RIGHT, .tecla_pulo = KEY_UP, .pontos = 0, .cor = ORANGE
-    };
-
-    // Inicialização da Bola
-    Bola bola = { .pos = { 200, 100 }, .vel = { 180, 0 }, .raio = 12 };
-
-    // Limite do chão baseado na matriz (Linha 8 * TILE_SIZE)
-    float chao_y = 8 * TILE_SIZE;
-    float rede_x = 8 * TILE_SIZE; // Coluna 8 é onde fica a rede
+int main(void)
+{
+    InitWindow(
+        LARGURA,
+        ALTURA,
+        "Head Volleyball"
+    );
 
     SetTargetFPS(60);
 
-    while (!WindowShouldClose()) {
+    // ==================================================
+    // PLAYERS
+    // ==================================================
+
+    Jogador p1 = {
+
+        200,
+        CHAO_Y - JOGADOR_H,
+
+        0,
+        0,
+
+        JOGADOR_W,
+        JOGADOR_H,
+
+        true,
+
+        BLUE
+    };
+
+    Jogador p2 = {
+
+        1000,
+        CHAO_Y - JOGADOR_H,
+
+        0,
+        0,
+
+        JOGADOR_W,
+        JOGADOR_H,
+
+        true,
+
+        RED
+    };
+
+    // ==================================================
+    // BALL
+    // ==================================================
+
+    Bola bola;
+
+    resetar_bola(&bola);
+
+    // ==================================================
+    // SCORE
+    // ==================================================
+
+    int pontos_p1 = 0;
+    int pontos_p2 = 0;
+
+    // ==================================================
+    // LOOP
+    // ==================================================
+
+    while (
+        !WindowShouldClose() &&
+        pontos_p1 < PONTOS_PARA_VENCER &&
+        pontos_p2 < PONTOS_PARA_VENCER
+    )
+    {
         float dt = GetFrameTime();
 
-        /* ---------------------------------------------------------- */
-        /* CONTROLES E MOVIMENTAÇÃO (Uso de Ponteiros implícito)     */
-        /* ---------------------------------------------------------- */
-        
-        // Jogador 1
-        if (IsKeyDown(p1.tecla_esq)) p1.vel.x = -VEL_JOGADOR;
-        else if (IsKeyDown(p1.tecla_dir)) p1.vel.x = VEL_JOGADOR;
-        else p1.vel.x = 0;
+        // ==============================================
+        // MOVIMENTO
+        // ==============================================
 
-        if (IsKeyPressed(p1.tecla_pulo) && p1.pos.y + p1.altura >= chao_y) p1.vel.y = FORCA_PULO;
+        mover_jogador(
+            &p1,
+            KEY_A,
+            KEY_D,
+            KEY_W,
+            dt
+        );
 
-        // Jogador 2
-        if (IsKeyDown(p2.tecla_esq)) p2.vel.x = -VEL_JOGADOR;
-        else if (IsKeyDown(p2.tecla_dir)) p2.vel.x = VEL_JOGADOR;
-        else p2.vel.x = 0;
+        mover_jogador(
+            &p2,
+            KEY_LEFT,
+            KEY_RIGHT,
+            KEY_UP,
+            dt
+        );
 
-        if (IsKeyPressed(p2.tecla_pulo) && p2.pos.y + p2.altura >= chao_y) p2.vel.y = FORCA_PULO;
+        aplicar_gravidade_jogador(&p1, dt);
+        aplicar_gravidade_jogador(&p2, dt);
 
-        /* ---------------------------------------------------------- */
-        /* FÍSICA E GRAVIDADE                                        */
-        /* ---------------------------------------------------------- */
-        
-        // Aplica gravidade nos jogadores e atualiza posições
-        p1.vel.y += GRAVIDADE * dt;
-        p2.vel.y += GRAVIDADE * dt;
-        p1.pos.x += p1.vel.x * dt;
-        p1.pos.y += p1.vel.y * dt;
-        p2.pos.x += p2.vel.x * dt;
-        p2.pos.y += p2.vel.y * dt;
+        limitar_jogador(
+            &p1,
+            0,
+            LARGURA / 2.0f - 20
+        );
 
-        // Aplica gravidade na Bola
-        bola.vel.y += (GRAVIDADE * 0.6f) * dt; // Bola cai um pouco mais leve
-        bola.pos.x += bola.vel.x * dt;
-        bola.pos.y += bola.vel.y * dt;
+        limitar_jogador(
+            &p2,
+            LARGURA / 2.0f + 20,
+            LARGURA
+        );
 
-        /* ---------------------------------------------------------- */
-        /* COLISÕES E LIMITES                                        */
-        /* ---------------------------------------------------------- */
+        // ==============================================
+        // BOLA
+        // ==============================================
 
-        // Bloqueio dos jogadores para não passarem da rede nem saírem da tela
-        if (p1.pos.x < 0) p1.pos.x = 0;
-        if (p1.pos.x + p1.largura > rede_x) p1.pos.x = rede_x - p1.largura;
+        aplicar_gravidade_bola(&bola, dt);
 
-        if (p2.pos.x < rede_x + 10) p2.pos.x = rede_x + 10;
-        if (p2.pos.x + p2.largura > LARGURA) p2.pos.x = LARGURA - p2.largura;
+        colisao_bola_parede(&bola);
 
-        // Trata colisão dos jogadores com o chão
-        if (p1.pos.y + p1.altura >= chao_y) {
-            p1.pos.y = chao_y - p1.altura;
-            p1.vel.y = 0;
-        }
-        if (p2.pos.y + p2.altura >= chao_y) {
-            p2.pos.y = chao_y - p2.altura;
-            p2.vel.y = 0;
-        }
+        colisao_rede(&bola);
 
-        // Colisão da Bola com as Paredes Laterais
-        if (bola.pos.x - bola.raio < 0 || bola.pos.x + bola.raio > LARGURA) {
-            bola.vel.x *= -1;
-        }
+        colisao_bola_cabeca(&bola, &p1);
 
-        // Colisão da Bola com a Rede (Coluna central)
-        if (bola.pos.y > 5 * TILE_SIZE && bola.pos.x + bola.raio >= rede_x && bola.pos.x - bola.raio <= rede_x + 10) {
-            bola.vel.x *= -1;
-            // Efeito de faíscas na rede
-            for(int i=0; i<5; i++) 
-                adicionar_particula(&lista_particulas, bola.pos, (Vector2){GetRandomValue(-50,50), GetRandomValue(-50,50)}, WHITE);
+        colisao_bola_cabeca(&bola, &p2);
+
+        // ==============================================
+        // PONTO
+        // ==============================================
+
+        if (bola.y + bola.raio >= CHAO_Y)
+        {
+            if (bola.x < LARGURA / 2.0f)
+                pontos_p2++;
+            else
+                pontos_p1++;
+
+            resetar_bola(&bola);
         }
 
-        // Colisão da Bola com o Jogador 1 (AABB vs Círculo simplificado)
-        if (CheckCollisionCircleRec(bola.pos, bola.raio, (Rectangle){p1.pos.x, p1.pos.y, p1.largura, p1.altura})) {
-            bola.vel.y = -350.0f; // Joga a bola para cima
-            bola.vel.x = (bola.pos.x - (p1.pos.x + p1.largura/2)) * 10; // Direção baseada em onde bateu no corpo
-            
-            // Cria partículas de impacto (Suor/Esforço)
-            for(int i=0; i<8; i++)
-                adicionar_particula(&lista_particulas, bola.pos, (Vector2){GetRandomValue(-100,100), GetRandomValue(-200,50)}, SKYBLUE);
-        }
+        // ==============================================
+        // DRAW
+        // ==============================================
 
-        // Colisão da Bola com o Jogador 2
-        if (CheckCollisionCircleRec(bola.pos, bola.raio, (Rectangle){p2.pos.x, p2.pos.y, p2.largura, p2.altura})) {
-            bola.vel.y = -350.0f;
-            bola.vel.x = (bola.pos.x - (p2.pos.x + p2.largura/2)) * 10;
-
-            for(int i=0; i<8; i++)
-                adicionar_particula(&lista_particulas, bola.pos, (Vector2){GetRandomValue(-100,100), GetRandomValue(-200,50)}, ORANGE);
-        }
-
-        // Bola tocou no Chão de Areia (Ponto!)
-        if (bola.pos.y + bola.raio >= chao_y) {
-            // Cria explosão de areia na posição do impacto
-            for(int i=0; i<20; i++) {
-                adicionar_particula(&lista_particulas, bola.pos, 
-                    (Vector2){(float)GetRandomValue(-150, 150), (float)GetRandomValue(-300, -50)}, YELLOW);
-            }
-
-            // Verifica de qual lado caiu para dar o ponto
-            if (bola.pos.x < rede_x) p2.pontos++;
-            else p1.pontos++;
-
-            // Reseta a bola no meio do lado de quem pontuou
-            bola.pos = (bola.pos.x < rede_x) ? (Vector2){600, 100} : (Vector2){200, 100};
-            bola.vel = (bola.pos.x < rede_x) ? (Vector2){-180, 0} : (Vector2){180, 0};
-        }
-
-        /* ---------------------------------------------------------- */
-        /* RENDERIZAÇÃO / DESENHO                                    */
-        /* ---------------------------------------------------------- */
         BeginDrawing();
-        ClearBackground(EXERALD); // Um fundo azul-esverdeado para simular o céu/mar
 
-        // Desenha o cenário lendo a MATRIZ
-        for (int i = 0; i < LINHAS; i++) {
-            for (int j = 0; j < COLUNAS; j++) {
-                if (cenario[i][j] == AREIA) {
-                    DrawRectangle(j * TILE_SIZE, i * TILE_SIZE, TILE_SIZE, TILE_SIZE, KHAKI);
-                } else if (cenario[i][j] == REDE) {
-                    DrawRectangle(j * TILE_SIZE, i * TILE_SIZE + 5, 10, TILE_SIZE, LIGHTGRAY);
-                    // Detalhe da rede quadriculada
-                    DrawRectangleLines(j * TILE_SIZE, i * TILE_SIZE + 5, 10, TILE_SIZE, DARKGRAY);
-                }
-            }
-        }
+        ClearBackground((Color){135, 206, 235, 255});
 
-        // Desenha as Partículas Ativas e gerencia a memória delas
-        atualizar_e_desenhar_particulas(&lista_particulas, dt);
+        // Sol
+        DrawCircle(
+            1100,
+            100,
+            50,
+            YELLOW
+        );
 
-        // Desenha os Jogadores
-        DrawRectangleRec((Rectangle){p1.pos.x, p1.pos.y, p1.largura, p1.altura}, p1.cor);
-        DrawRectangleRec((Rectangle){p2.pos.x, p2.pos.y, p2.largura, p2.altura}, p2.cor);
+        // Chão areia
+        DrawRectangle(
+            0,
+            CHAO_Y,
+            LARGURA,
+            ALTURA - CHAO_Y,
+            (Color){230, 200, 120, 255}
+        );
 
-        // Desenha a Bola
-        DrawCircleV(bola.pos, bola.raio, WHITE);
-        DrawCircleLines((int)bola.pos.x, (int)bola.pos.y, bola.raio, BLACK); // Contorno da bola de vôlei
+        // Rede
+        DrawRectangle(
+            LARGURA / 2 - 5,
+            CHAO_Y - 220,
+            10,
+            220,
+            WHITE
+        );
+
+        // Jogador 1 corpo
+        DrawRectangle(
+            p1.x,
+            p1.y + 30,
+            p1.largura,
+            p1.altura - 30,
+            p1.cor
+        );
+
+        // Jogador 1 cabeça
+        DrawCircle(
+            p1.x + p1.largura / 2,
+            p1.y + CABECA_RAIO,
+            CABECA_RAIO,
+            SKYBLUE
+        );
+
+        // Jogador 2 corpo
+        DrawRectangle(
+            p2.x,
+            p2.y + 30,
+            p2.largura,
+            p2.altura - 30,
+            p2.cor
+        );
+
+        // Jogador 2 cabeça
+        DrawCircle(
+            p2.x + p2.largura / 2,
+            p2.y + CABECA_RAIO,
+            CABECA_RAIO,
+            PINK
+        );
+
+        // Bola
+        DrawCircle(
+            bola.x,
+            bola.y,
+            bola.raio,
+            WHITE
+        );
 
         // Placar
-        DrawText(TextFormat("%d", p1.pontos), LARGURA/2 - 100, 30, 40, SKYBLUE);
-        DrawText("x", LARGURA/2 - 10, 35, 30, WHITE);
-        DrawText(TextFormat("%d", p2.pontos), LARGURA/2 + 80, 30, 40, ORANGE);
+        DrawText(
+            TextFormat("%d", pontos_p1),
+            500,
+            40,
+            60,
+            BLACK
+        );
+
+        DrawText(
+            TextFormat("%d", pontos_p2),
+            730,
+            40,
+            60,
+            BLACK
+        );
+
+        // Controles
+        DrawText(
+            "P1: A D W",
+            40,
+            40,
+            24,
+            BLACK
+        );
+
+        DrawText(
+            "P2: <- -> ^",
+            980,
+            40,
+            24,
+            BLACK
+        );
 
         EndDrawing();
     }
 
-    // Libera a memória de qualquer partícula que tenha sobrado antes de fechar
-    limpar_todas_particulas(lista_particulas);
+    // ==================================================
+    // TELA FINAL
+    // ==================================================
+
+    while (!WindowShouldClose())
+    {
+        BeginDrawing();
+
+        ClearBackground(BLACK);
+
+        if (pontos_p1 > pontos_p2)
+        {
+            DrawText(
+                "PLAYER 1 VENCEU!",
+                380,
+                300,
+                50,
+                BLUE
+            );
+        }
+        else
+        {
+            DrawText(
+                "PLAYER 2 VENCEU!",
+                380,
+                300,
+                50,
+                RED
+            );
+        }
+
+        DrawText(
+            "ESC para sair",
+            500,
+            400,
+            30,
+            WHITE
+        );
+
+        EndDrawing();
+
+        if (IsKeyPressed(KEY_ESCAPE))
+            break;
+    }
 
     CloseWindow();
+
     return 0;
 }
