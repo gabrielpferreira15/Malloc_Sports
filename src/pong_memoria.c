@@ -56,6 +56,9 @@ static void resetar_bola(Bola *b, float vx, float vy) {
 
 int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
 
+    Texture2D textura_bola =
+    LoadTexture("assets/bola.png");
+
     Raquete r1 = {
         .x           = MARGEM_RAQUETE,
         .y           = ALTURA / 2.0f - RAQUETE_H / 2.0f,
@@ -420,11 +423,27 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
                 ? YELLOW
                 : RAYWHITE;
 
-            DrawCircle(
-                (int)bola.x,
-                (int)bola.y,
-                (float)bola.raio,
-                cor_bola
+
+            DrawTexturePro(
+                textura_bola,
+                (Rectangle){
+                    0,
+                    0,
+                    (float)textura_bola.width,
+                    (float)textura_bola.height
+                },
+                (Rectangle){
+                    bola.x,
+                    bola.y,
+                    bola.raio * 2,
+                    bola.raio * 2
+                },
+                (Vector2){
+                    bola.raio,
+                    bola.raio
+                },
+                0.0f,
+                WHITE
             );
 
             if (powerup_ativo) {
@@ -503,6 +522,8 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
 
     *pontos_p1 = pts1;
     *pontos_p2 = pts2;
+
+    UnloadTexture(textura_bola);
 
     return
         (pts1 >= PONTOS_PRA_VENCER)
