@@ -69,7 +69,7 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
 
     for (int i = 0; i < NUM_FRAMES; i++) {
         // Vai procurar os ficheiros frame0.png, frame1.png, etc...
-        const char* caminho_ficheiro = TextFormat("assets/frame%d.png", i);
+        const char* caminho_ficheiro = TextFormat("assets/sprites/frame%d.png", i);
         texturas_bola[i] = LoadTexture(caminho_ficheiro);
 
         if (texturas_bola[i].id <= 0 || texturas_bola[i].width <= 0) {
