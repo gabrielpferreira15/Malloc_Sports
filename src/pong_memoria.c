@@ -560,7 +560,7 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
                     bola.raio * 4, // Multiplica por 4 para o tamanho se ajustar corretamente no ecrã
                     bola.raio * 4
                 };
-
+                
                 Vector2 origin = { (dest.width / 2), (dest.height / 2) };
 
                 DrawTexturePro(tex_atual, source, dest, origin, 0.0f, cor_bola);
