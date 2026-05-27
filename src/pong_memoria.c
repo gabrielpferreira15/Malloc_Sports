@@ -13,7 +13,7 @@
 #define VEL_MAX_X           800.0f
 #define VEL_MAX_Y_ANGULO    500.0f
 #define ACELERACAO_POR_PT     1.1f
-#define PONTOS_PRA_VENCER     7
+#define DURACAO_PARTIDA      60.0f
 #define POWERUP_INTERVALO     8.0f
 #define BOOST_DURACAO         3.0f
 #define BOOST_FATOR           2.0f
@@ -37,6 +37,11 @@ static float clampf(float v, float lo, float hi) {
     return v;
 }
 
+// Mantem o boost sem perder a velocidade base quando ela muda.
+static float aplicar_boost(float v, bool boost_ativo) {
+    return boost_ativo ? v * BOOST_FATOR : v;
+}
+
 static int circulo_colidiu_retangulo(float cx, float cy, float r,
         float rx, float ry, float rw, float rh) {
     float px = clampf(cx, rx, rx + rw); //ponto X da raquete mais proximo a bola
@@ -57,7 +62,13 @@ static void resetar_bola(Bola *b, float vx, float vy) {
 int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
 
     Texture2D textura_bola =
-    LoadTexture("assets/bola.png");
+    LoadTexture("assets/Bola.png");
+
+    // Fallback caso a textura não carregue (evita bola invisível).
+    bool textura_bola_valida =
+        (textura_bola.id > 0) &&
+        (textura_bola.width > 0) &&
+        (textura_bola.height > 0);
 
     Raquete r1 = {
         .x           = MARGEM_RAQUETE,
@@ -85,6 +96,11 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
     float flash_p1 = 0.0f, flash_p2 = 0.0f;
     const float FLASH_DUR = 0.4f;
 
+    // Controle de tempo da partida e "ponto de ouro".
+    float tempo_restante = DURACAO_PARTIDA;
+    bool  ponto_de_ouro = false;
+    int   vencedor = 0;
+
     bool  powerup_ativo  = false;
     float powerup_x      = 0.0f, powerup_y = 0.0f;
     float timer_powerup  = POWERUP_INTERVALO;
@@ -103,11 +119,21 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
 
     const int LIMITE_REBATES = 20;
 
-    while (!WindowShouldClose() &&
-        pts1 < PONTOS_PRA_VENCER &&
-        pts2 < PONTOS_PRA_VENCER) {
+    while (!WindowShouldClose() && vencedor == 0) {
 
         float dt = GetFrameTime();
+
+        // Atualiza o cronômetro (só roda enquanto não entrou no ponto de ouro).
+        if (!ponto_de_ouro) {
+            tempo_restante -= dt;
+            if (tempo_restante <= 0.0f) {
+                tempo_restante = 0.0f;
+                if (pts1 == pts2)
+                    ponto_de_ouro = true; // empate no fim do tempo → morte súbita
+                else
+                    vencedor = (pts1 > pts2) ? 1 : 2;
+            }
+        }
 
         // Input
         if (IsKeyDown(r1.tecla_cima))
@@ -154,7 +180,10 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
                 (bola.y - (r1.y + RAQUETE_H / 2.0f))
                 / (RAQUETE_H / 2.0f);
 
-            bola.vel_y = VEL_MAX_Y_ANGULO * offset;
+            bola.vel_y = aplicar_boost(
+                VEL_MAX_Y_ANGULO * offset,
+                boost_ativo
+            );
 
             // =========================
             // AUMENTO DE VELOCIDADE
@@ -166,11 +195,13 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
                 float sinal_x =
                     (bola.vel_x > 0) ? 1.0f : -1.0f;
 
-                bola.vel_x =
+                bola.vel_x = aplicar_boost(
                     sinal_x *
                     (VEL_BOLA_X_INICIAL +
                     contador_rebates *
-                    ACELERACAO_REBATE_BOLA);
+                    ACELERACAO_REBATE_BOLA),
+                    boost_ativo
+                );
 
                 velocidade_raquete =
                     VEL_RAQUETE +
@@ -194,7 +225,10 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
                 (bola.y - (r2.y + RAQUETE_H / 2.0f))
                 / (RAQUETE_H / 2.0f);
 
-            bola.vel_y = VEL_MAX_Y_ANGULO * offset;
+            bola.vel_y = aplicar_boost(
+                VEL_MAX_Y_ANGULO * offset,
+                boost_ativo
+            );
 
             // =========================
             // AUMENTO DE VELOCIDADE
@@ -206,11 +240,13 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
                 float sinal_x =
                     (bola.vel_x > 0) ? 1.0f : -1.0f;
 
-                bola.vel_x =
+                bola.vel_x = aplicar_boost(
                     sinal_x *
                     (VEL_BOLA_X_INICIAL +
                     contador_rebates *
-                    ACELERACAO_REBATE_BOLA);
+                    ACELERACAO_REBATE_BOLA),
+                    boost_ativo
+                );
 
                 velocidade_raquete =
                     VEL_RAQUETE +
@@ -219,11 +255,16 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
             }
         }
 
-        if (fabsf(bola.vel_x) > VEL_MAX_X)
+        float vel_max_x =
+            boost_ativo
+            ? VEL_MAX_X * BOOST_FATOR
+            : VEL_MAX_X;
+
+        if (fabsf(bola.vel_x) > vel_max_x)
             bola.vel_x =
                 (bola.vel_x > 0)
-                ? VEL_MAX_X
-                : -VEL_MAX_X;
+                ? vel_max_x
+                : -vel_max_x;
 
         // Ponto para P2
         if (bola.x + bola.raio < 0) {
@@ -255,6 +296,10 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
             velocidade_raquete = VEL_RAQUETE;
 
             resetar_bola(&bola, vel_x_atual, vel_y_atual);
+
+            // Em ponto de ouro, o primeiro a marcar vence imediatamente.
+            if (ponto_de_ouro)
+                vencedor = 2;
         }
 
         // Ponto para P1
@@ -287,6 +332,10 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
             velocidade_raquete = VEL_RAQUETE;
 
             resetar_bola(&bola, vel_x_atual, vel_y_atual);
+
+            // Em ponto de ouro, o primeiro a marcar vence imediatamente.
+            if (ponto_de_ouro)
+                vencedor = 1;
         }
 
         // Powerup
@@ -423,28 +472,36 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
                 ? YELLOW
                 : RAYWHITE;
 
-
-            DrawTexturePro(
-                textura_bola,
-                (Rectangle){
-                    0,
-                    0,
-                    (float)textura_bola.width,
-                    (float)textura_bola.height
-                },
-                (Rectangle){
-                    bola.x,
-                    bola.y,
-                    bola.raio * 2,
-                    bola.raio * 2
-                },
-                (Vector2){
+            if (textura_bola_valida) {
+                DrawTexturePro(
+                    textura_bola,
+                    (Rectangle){
+                        0,
+                        0,
+                        (float)textura_bola.width,
+                        (float)textura_bola.height
+                    },
+                    (Rectangle){
+                        bola.x,
+                        bola.y,
+                        bola.raio * 2,
+                        bola.raio * 2
+                    },
+                    (Vector2){
+                        bola.raio,
+                        bola.raio
+                    },
+                    0.0f,
+                    cor_bola
+                );
+            } else {
+                DrawCircle(
+                    (int)bola.x,
+                    (int)bola.y,
                     bola.raio,
-                    bola.raio
-                },
-                0.0f,
-                WHITE
-            );
+                    cor_bola
+                );
+            }
 
             if (powerup_ativo) {
 
@@ -479,6 +536,35 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
                 60,
                 WHITE
             );
+
+            // Timer central (ou "Ponto de ouro!" quando necessário).
+            if (ponto_de_ouro) {
+                const char *msg_ouro = "Ponto de ouro!";
+                int fs_ouro = 28;
+                DrawText(
+                    msg_ouro,
+                    LARGURA / 2 - MeasureText(msg_ouro, fs_ouro) / 2,
+                    20,
+                    fs_ouro,
+                    GOLD
+                );
+            } else {
+                int tempo_int = (int)ceilf(tempo_restante);
+                if (tempo_int < 0) tempo_int = 0;
+
+                int min = tempo_int / 60;
+                int seg = tempo_int % 60;
+
+                const char *timer_txt = TextFormat("%d:%02d", min, seg);
+                int fs_timer = 28;
+                DrawText(
+                    timer_txt,
+                    LARGURA / 2 - MeasureText(timer_txt, fs_timer) / 2,
+                    20,
+                    fs_timer,
+                    RAYWHITE
+                );
+            }
 
             DrawText(
                 "P1 [W/S]",
@@ -523,10 +609,11 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
     *pontos_p1 = pts1;
     *pontos_p2 = pts2;
 
-    UnloadTexture(textura_bola);
+    if (textura_bola_valida)
+        UnloadTexture(textura_bola);
 
-    return
-        (pts1 >= PONTOS_PRA_VENCER)
-        ? 1
-        : 2;
+    if (vencedor == 0)
+        vencedor = (pts1 >= pts2) ? 1 : 2;
+
+    return vencedor;
 }
