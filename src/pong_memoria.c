@@ -18,9 +18,7 @@
 #define BOOST_DURACAO         3.0f
 #define BOOST_FATOR           2.0f
 #define MARGEM_RAQUETE        40
-
-// ADICIONADO: Quantidade total de imagens da tua animação
-#define NUM_FRAMES 7 
+#define NUM_FRAMES 5
 
 typedef struct {
     float x, y; // posição atual da bola
@@ -78,10 +76,16 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
             texturas_validas = false; // Se uma falhar, cancelamos a animação visual por segurança
         }
     }
-
+    
     int frame_atual = 0;
+
     float tempo_animacao = 0.0f;
-    float velocidade_frame = 0.08f; // Tempo entre cada frame
+    float velocidade_frame = 0.08f;
+
+    // Controle do frame de impacto
+    float tempo_impacto = 0.0f;
+
+    bool mostrando_impacto = false;
 
     Raquete r1 = {
         .x           = MARGEM_RAQUETE,
@@ -135,17 +139,43 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
     while (!WindowShouldClose() && vencedor == 0) {
 
         float dt = GetFrameTime();
-        
-        // ==========================================
-        // 2. ATUALIZAR O CRONÔMETRO DA ANIMAÇÃO
-        // ==========================================
-        tempo_animacao += dt;
-        if (tempo_animacao >= velocidade_frame) {
-            tempo_animacao = 0.0f;
-            frame_atual++;
-            if (frame_atual >= NUM_FRAMES) {
-                frame_atual = 0; // Volta para a primeira imagem da lista
+// ==========================================
+// 2. SISTEMA NOVO DE ANIMAÇÃO
+// ==========================================
+
+        if (mostrando_impacto) {
+
+            tempo_impacto -= dt;
+
+            // frame4 = impacto
+            frame_atual = 4;
+
+            // terminou impacto
+            if (tempo_impacto <= 0.0f) {
+
+                mostrando_impacto = false;
+
+                // reinicia animação
+                frame_atual = 0;
+                tempo_animacao = 0.0f;
             }
+
+        } else {
+
+            // anima apenas até frame3
+            if (frame_atual < 3) {
+
+                tempo_animacao += dt;
+
+                if (tempo_animacao >= velocidade_frame) {
+
+                    tempo_animacao = 0.0f;
+                    frame_atual++;
+                }
+            }
+
+            // quando chega no frame3:
+            // permanece parado até rebater
         }
 
         // Atualiza o cronômetro (só roda enquanto não entrou no ponto de ouro).
@@ -198,6 +228,10 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
                 r1.x, r1.y,
                 RAQUETE_W, RAQUETE_H)) {
 
+            // ATIVA O EFEITO DE IMPACTO
+            mostrando_impacto = true;
+            tempo_impacto = 0.12f;
+
             bola.x     = r1.x + RAQUETE_W + (float)bola.raio;
             bola.vel_x = fabsf(bola.vel_x);
 
@@ -242,6 +276,10 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
                 (float)bola.raio,
                 r2.x, r2.y,
                 RAQUETE_W, RAQUETE_H)) {
+
+            // ATIVA O EFEITO DE IMPACTO
+            mostrando_impacto = true;
+            tempo_impacto = 0.12f;
 
             bola.x     = r2.x - (float)bola.raio;
             bola.vel_x = -fabsf(bola.vel_x);
