@@ -19,6 +19,9 @@
 #define BOOST_FATOR           2.0f
 #define MARGEM_RAQUETE        40
 
+// ADICIONADO: Quantidade total de imagens da tua animação
+#define NUM_FRAMES 7 
+
 typedef struct {
     float x, y; // posição atual da bola
     float vel_x, vel_y;
@@ -60,15 +63,25 @@ static void resetar_bola(Bola *b, float vx, float vy) {
 }
 
 int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
+    // ==========================================
+    // 1. CARREGAR MÚLTIPLAS IMAGENS
+    // ==========================================
+    Texture2D texturas_bola[NUM_FRAMES];
+    bool texturas_validas = true;
 
-    Texture2D textura_bola =
-    LoadTexture("assets/Bola.png");
+    for (int i = 0; i < NUM_FRAMES; i++) {
+        // Vai procurar os ficheiros frame0.png, frame1.png, etc...
+        const char* caminho_ficheiro = TextFormat("assets/frame%d.png", i);
+        texturas_bola[i] = LoadTexture(caminho_ficheiro);
 
-    // Fallback caso a textura não carregue (evita bola invisível).
-    bool textura_bola_valida =
-        (textura_bola.id > 0) &&
-        (textura_bola.width > 0) &&
-        (textura_bola.height > 0);
+        if (texturas_bola[i].id <= 0 || texturas_bola[i].width <= 0) {
+            texturas_validas = false; // Se uma falhar, cancelamos a animação visual por segurança
+        }
+    }
+
+    int frame_atual = 0;
+    float tempo_animacao = 0.0f;
+    float velocidade_frame = 0.08f; // Tempo entre cada frame
 
     Raquete r1 = {
         .x           = MARGEM_RAQUETE,
@@ -122,6 +135,18 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
     while (!WindowShouldClose() && vencedor == 0) {
 
         float dt = GetFrameTime();
+        
+        // ==========================================
+        // 2. ATUALIZAR O CRONÔMETRO DA ANIMAÇÃO
+        // ==========================================
+        tempo_animacao += dt;
+        if (tempo_animacao >= velocidade_frame) {
+            tempo_animacao = 0.0f;
+            frame_atual++;
+            if (frame_atual >= NUM_FRAMES) {
+                frame_atual = 0; // Volta para a primeira imagem da lista
+            }
+        }
 
         // Atualiza o cronômetro (só roda enquanto não entrou no ponto de ouro).
         if (!ponto_de_ouro) {
@@ -472,28 +497,35 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
                 ? YELLOW
                 : RAYWHITE;
 
-            if (textura_bola_valida) {
-                DrawTexturePro(
-                    textura_bola,
-                    (Rectangle){
-                        0,
-                        0,
-                        (float)textura_bola.width,
-                        (float)textura_bola.height
-                    },
-                    (Rectangle){
-                        bola.x,
-                        bola.y,
-                        bola.raio * 2,
-                        bola.raio * 2
-                    },
-                    (Vector2){
-                        bola.raio,
-                        bola.raio
-                    },
+            // ==========================================
+            // 3. DESENHAR O FRAME DA LISTA
+            // ==========================================
+            if (texturas_validas) {
+                Texture2D tex_atual = texturas_bola[frame_atual];
+
+                float largura_tex = (float)tex_atual.width;
+                float altura_tex = (float)tex_atual.height;
+
+                // Inverte a imagem dependendo da direção da bola (passando uma largura negativa)
+                float direcao_sprite = (bola.vel_x < 0) ? -largura_tex : largura_tex;
+
+                Rectangle source = {
                     0.0f,
-                    cor_bola
-                );
+                    0.0f,
+                    direcao_sprite,
+                    altura_tex
+                };
+
+                Rectangle dest = {
+                    bola.x,
+                    bola.y,
+                    bola.raio * 4, // Multiplica por 4 para o tamanho se ajustar corretamente no ecrã
+                    bola.raio * 4
+                };
+
+                Vector2 origin = { (dest.width / 2), (dest.height / 2) };
+
+                DrawTexturePro(tex_atual, source, dest, origin, 0.0f, cor_bola);
             } else {
                 DrawCircle(
                     (int)bola.x,
@@ -609,8 +641,14 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
     *pontos_p1 = pts1;
     *pontos_p2 = pts2;
 
-    if (textura_bola_valida)
-        UnloadTexture(textura_bola);
+    // ==========================================
+    // 4. LIMPAR A MEMÓRIA DA LISTA
+    // ==========================================
+    for (int i = 0; i < NUM_FRAMES; i++) {
+        if (texturas_bola[i].id > 0) {
+            UnloadTexture(texturas_bola[i]);
+        }
+    }
 
     if (vencedor == 0)
         vencedor = (pts1 >= pts2) ? 1 : 2;
