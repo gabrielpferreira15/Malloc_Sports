@@ -23,7 +23,7 @@
 
 #define BOLA_RAIO 18
 
-#define PONTOS_PARA_VENCER 7
+#define DURACAO_PARTIDA      60.0f
 
 // ======================================================
 // STRUCTS
@@ -300,73 +300,121 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
     int pts1 = 0;
     int pts2 = 0;
 
-    while (
-        !WindowShouldClose() &&
-        pts1 < PONTOS_PARA_VENCER &&
-        pts2 < PONTOS_PARA_VENCER
-    )
+    float tempo_restante = DURACAO_PARTIDA;
+    bool  ponto_de_ouro = false;
+    int   vencedor = 0;
+    
+    while (!WindowShouldClose() && vencedor == 0)
     {
         float dt = GetFrameTime();
 
-        // PLAYER 1
-        mover_jogador(
-            &p1,
-            KEY_A,
-            KEY_D,
-            KEY_W,
-            dt
-        );
+        // Atualização do tempo da partida e controle de "ponto de ouro"
+        if (!ponto_de_ouro) {
+            tempo_restante -= dt;
+            if (tempo_restante <= 0.0f) {
+                tempo_restante = 0.0f;
+                if (pts1 == pts2)
+                    ponto_de_ouro = true; // empate -> morte subita
+                else
+                    vencedor = (pts1 > pts2) ? 1 : 2;
+            }
+        }
 
-        // PLAYER 2
-        mover_jogador(
-            &p2,
-            KEY_LEFT,
-            KEY_RIGHT,
-            KEY_UP,
-            dt
-        );
-
-        aplicar_gravidade_jogador(&p1, dt);
-        aplicar_gravidade_jogador(&p2, dt);
-
-        limitar_jogador(
-            &p1,
-            0,
-            LARGURA / 2.0f - 20
-        );
-
-        limitar_jogador(
-            &p2,
-            LARGURA / 2.0f + 20,
-            LARGURA
-        );
-
-        // BOLA
-        aplicar_gravidade_bola(&bola, dt);
-
-        colisao_bola_parede(&bola);
-
-        colisao_rede(&bola);
-
-        colisao_bola_cabeca(&bola, &p1);
-
-        colisao_bola_cabeca(&bola, &p2);
-
-        // PONTO
-        if (bola.y + bola.raio >= CHAO_Y)
+        if (vencedor == 0)
         {
-            if (bola.x < LARGURA / 2.0f)
-                pts2++;
-            else
-                pts1++;
+            // PLAYER 1
+            mover_jogador(
+                &p1,
+                KEY_A,
+                KEY_D,
+                KEY_W,
+                dt
+            );
 
-            resetar_bola(&bola);
+            // PLAYER 2
+            mover_jogador(
+                &p2,
+                KEY_LEFT,
+                KEY_RIGHT,
+                KEY_UP,
+                dt
+            );
+
+            aplicar_gravidade_jogador(&p1, dt);
+            aplicar_gravidade_jogador(&p2, dt);
+
+            limitar_jogador(
+                &p1,
+                0,
+                LARGURA / 2.0f - 20
+            );
+
+            limitar_jogador(
+                &p2,
+                LARGURA / 2.0f + 20,
+                LARGURA
+            );
+
+            // BOLA
+            aplicar_gravidade_bola(&bola, dt);
+
+            colisao_bola_parede(&bola);
+
+            colisao_rede(&bola);
+
+            colisao_bola_cabeca(&bola, &p1);
+
+            colisao_bola_cabeca(&bola, &p2);
+
+            // PONTO
+            if (bola.y + bola.raio >= CHAO_Y)
+            {
+                if (bola.x < LARGURA / 2.0f)
+                    pts2++;
+                else
+                    pts1++;
+
+                if (ponto_de_ouro) {
+                    vencedor = (bola.x < LARGURA / 2.0f) ? 2 : 1;
+                } else {
+                    resetar_bola(&bola);
+                }
+            }
         }
 
         // DRAW
         BeginDrawing();
 
         ClearBackground((Color){135, 206, 235, 255});
+
+        // Timer central (ou "Ponto de ouro!" quando necessario).
+        if (ponto_de_ouro) {
+            const char *msg_ouro = "Ponto de ouro!";
+            int fs_ouro = 28;
+            DrawText(
+                msg_ouro,
+                LARGURA / 2 - MeasureText(msg_ouro, fs_ouro) / 2,
+                20,
+                fs_ouro,
+                GOLD
+            );
+        } else {
+            int tempo_int = (int)ceilf(tempo_restante);
+            if (tempo_int < 0) tempo_int = 0;
+
+            int min = tempo_int / 60;
+            int seg = tempo_int % 60;
+
+            const char *timer_txt = TextFormat("%d:%02d", min, seg);
+            int fs_timer = 28;
+            DrawText(
+                timer_txt,
+                LARGURA / 2 - MeasureText(timer_txt, fs_timer) / 2,
+                20,
+                fs_timer,
+                BLACK
+            );
+        }
 
         // Sol
         DrawCircle(
@@ -457,8 +505,14 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
     *pontos_p1 = pts1;
     *pontos_p2 = pts2;
 
-    return
-        (pts1 >= PONTOS_PARA_VENCER)
-        ? 1
-        : 2;
+    if (vencedor == 0){
+        if (pts1 > pts2)
+            vencedor = 1;
+        else if (pts2 > pts1)
+            vencedor = 2;
+        else
+            vencedor = 0;
+    }
+
+    return vencedor;
 }
