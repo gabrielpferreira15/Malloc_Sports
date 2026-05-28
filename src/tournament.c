@@ -6,6 +6,7 @@ void iniciar_torneio(EstadoTorneio *t) {
     t->jogo_atual     = 0;
     t->jogos_ordem[0] = CENA_CORRIDA;
     t->jogos_ordem[1] = CENA_PONG;
+    t->jogos_ordem[2] = CENA_VOLEI;
 }
 
 void registrar_resultado(EstadoTorneio *t, int vencedor) {

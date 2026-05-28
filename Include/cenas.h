@@ -10,6 +10,7 @@ typedef enum {
     CENA_SELECAO_MINIGAME,
     CENA_PONG,
     CENA_CORRIDA,
+    CENA_VOLEI,
     CENA_RESULTADO,
     CENA_SAIR
 } Cena;

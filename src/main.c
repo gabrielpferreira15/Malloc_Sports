@@ -20,6 +20,7 @@
 #include "menu.h"
 #include "pong_memoria.h"
 #include "corrida_ponteiros.h"
+#include "volei.h"
 #include "tournament.h"
 
 int main(void) {
@@ -104,6 +105,31 @@ int main(void) {
                 }
 
                 // Se o jogador fechou a janela durante o jogo, sai 
+                cena_atual = WindowShouldClose() ? CENA_SAIR : CENA_RESULTADO;
+                break;
+            }
+
+            case CENA_VOLEI: {
+                int pts1 = 0, pts2 = 0;
+                int vencedor = jogar_volei(&pts1, &pts2);
+
+                resultado.vencedor  = vencedor;
+                resultado.pontos_p1 = pts1;
+                resultado.pontos_p2 = pts2;
+                resultado.em_torneio = em_torneio;
+                resultado.torneio_final = false;
+                resultado.ultimo_jogo = CENA_VOLEI;
+
+                if (em_torneio) {
+                    registrar_resultado(&torneio, vencedor);
+                    if (torneio_acabou(&torneio)) {
+                        resultado.torneio_final = true;
+                        resultado.vencedor = vencedor_torneio(&torneio);
+                        resultado.pontos_p1 = torneio.placares[0];
+                        resultado.pontos_p2 = torneio.placares[1];
+                    }
+                }
+
                 cena_atual = WindowShouldClose() ? CENA_SAIR : CENA_RESULTADO;
                 break;
             }

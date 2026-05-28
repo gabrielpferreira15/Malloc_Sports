@@ -5,7 +5,7 @@
 #include "cenas.h"
 #include "tournament.h"
 
-#define TORNEIO_TOTAL_JOGOS 2 //No final do jogo o número total será 3, mas, no momento só temos o pong e corrida
+#define TORNEIO_TOTAL_JOGOS 3 // Torneio com corrida, pong e volei
 
 typedef struct {
     int  placares[2];                       // [0]=P1  [1]=P2              

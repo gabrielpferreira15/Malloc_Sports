@@ -196,29 +196,32 @@ Cena tela_selecao_minigame(void) {
     const int W = GetScreenWidth();
     const int H = GetScreenHeight();
 
-    int opcao_selecionada = 0; // 0=Corrida, 1=Pong
+    int opcao_selecionada = 0; // 0=Corrida, 1=Pong, 2=Volei
     Cena cena_atual = CENA_SELECAO_MINIGAME;
     
     while (!WindowShouldClose()) {
         Cena prox_cena = cena_atual;
 
         if (IsKeyPressed(KEY_RIGHT)) {
-            opcao_selecionada = (opcao_selecionada + 1) % 2;
+            opcao_selecionada = (opcao_selecionada + 1) % 3;
         }
         if (IsKeyPressed(KEY_LEFT)) {
-            opcao_selecionada = (opcao_selecionada - 1 + 2) % 2; 
+            opcao_selecionada = (opcao_selecionada - 1 + 3) % 3; 
         }
         if (IsKeyPressed(KEY_ENTER)) {
             if (opcao_selecionada == 0) prox_cena = CENA_CORRIDA;
             if (opcao_selecionada == 1) prox_cena = CENA_PONG;
+            if (opcao_selecionada == 2) prox_cena = CENA_VOLEI;
         }
         if (IsKeyPressed(KEY_ESCAPE)) prox_cena = CENA_SELECAO_MODO;
 
-        Rectangle card_corrida = { W / 2.0f - 240, H / 2.0f - 100, 200, 200 };
-        Rectangle card_pong    = { W / 2.0f + 40,  H / 2.0f - 100, 200, 200 };
+        Rectangle card_corrida = { W / 2.0f - 340, H / 2.0f - 100, 200, 200 };
+        Rectangle card_pong    = { W / 2.0f - 100, H / 2.0f - 100, 200, 200 };
+        Rectangle card_volei   = { W / 2.0f + 140, H / 2.0f - 100, 200, 200 };
 
         if (botao_clicado(card_corrida)) prox_cena = CENA_CORRIDA;
         else if (botao_clicado(card_pong)) prox_cena = CENA_PONG;
+        else if (botao_clicado(card_volei)) prox_cena = CENA_VOLEI;
 
         BeginDrawing();
         ClearBackground((Color){18, 22, 35, 255});
@@ -227,6 +230,7 @@ Cena tela_selecao_minigame(void) {
 
         desenhar_botao(card_corrida, "Corrida", opcao_selecionada == 0);
         desenhar_botao(card_pong, "Pong", opcao_selecionada == 1);
+        desenhar_botao(card_volei, "Vôlei", opcao_selecionada == 2);
 
         DrawText("USE AS SETAS E ENTER", W/2 - MeasureText("USE AS SETAS E ENTER", 20)/2, H/2 + 150, 20, LIGHTGRAY);
         DrawText("ESC = Voltar", W/2 - MeasureText("ESC = Voltar", 18)/2, H - 40, 18, DARKGRAY);

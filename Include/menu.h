@@ -16,8 +16,7 @@ typedef struct {
 } ResultadoPartida;
 
 // Exibe o menu principal
-/* No momento a opção de "Jogar" só vai levar para o Pong, 
-já que é o único jogo implpementado */
+/* A opcao de "Jogar" leva para a selecao de minigames. */
 Cena tela_menu_principal(void);
 
 /* Seleção de modo: retorna CENA_SELECAO_MINIGAME ou CENA_CORRIDA
@@ -25,7 +24,7 @@ Cena tela_menu_principal(void);
  * for escolhido. */
 Cena tela_selecao_modo(EstadoTorneio *torneio);
 
-/* Seleção de minigame (modo Avulso): retorna CENA_CORRIDA ou CENA_PONG. */
+/* Selecao de minigame (modo Avulso): retorna CENA_CORRIDA, CENA_PONG ou CENA_VOLEI. */
 Cena tela_selecao_minigame(void);
 
 // Exibe o placar final com opções de Revanche e Menu.
