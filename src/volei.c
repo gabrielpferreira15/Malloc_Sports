@@ -25,6 +25,17 @@
 
 #define DURACAO_PARTIDA      60.0f
 
+#define VEL_BOLA_X_INICIAL 300.0f
+#define VEL_BOLA_Y_INICIAL -200.0f
+
+#define TEMPO_SAQUE 1.0f
+
+#define MAX_TOQUES 3
+
+#define LADO_NENHUM 0
+#define LADO_P1 1
+#define LADO_P2 2
+
 // ======================================================
 // STRUCTS
 // ======================================================
@@ -60,8 +71,7 @@ typedef struct {
 // FUNÇÕES AUXILIARES
 // ======================================================
 
-float clampf(float valor, float min, float max)
-{
+float clampf(float valor, float min, float max){
     if (valor < min) return min;
     if (valor > max) return max;
 
@@ -70,19 +80,55 @@ float clampf(float valor, float min, float max)
 
 // ------------------------------------------------------
 
-void resetar_bola(Bola *bola)
+static int lado_bola_por_x(float x){
+    return (x < LARGURA / 2.0f) ? LADO_P1 : LADO_P2;
+}
+
+// Mantem apenas o lado atual da bola (posicao), sem resetar toques aqui.
+// O reset passa a acontecer no primeiro toque do time, evitando carry over.
+static void atualizar_lado_bola(const Bola *bola, int *lado_bola){
+    *lado_bola = lado_bola_por_x(bola->x);
+}
+
+// Registra um toque e garante reset correto quando a posse muda de time.
+// Retorna false quando o time estoura o limite de toques.
+static bool registrar_toque(int lado_jogador,int *lado_toque,int *toques_p1,int *toques_p2)
+{
+    int *toques = (lado_jogador == LADO_P1) ? toques_p1 : toques_p2;
+
+    // Reset no primeiro toque do time (posse mudou), evitando carry over.
+    if (*lado_toque != lado_jogador)
+    {
+        *lado_toque = lado_jogador;
+        *toques = MAX_TOQUES;
+    }
+
+    if (*toques <= 0)
+        return false;
+
+    (*toques)--;
+    return true;
+}
+
+// ------------------------------------------------------
+
+// Prepara o saque: bola parada no centro e direcao sorteada.
+void resetar_bola(Bola *bola, int *direcao_saque, float *tempo_saque)
 {
     bola->x = LARGURA / 2.0f;
     bola->y = 200;
 
-    bola->vel_x =
-        (GetRandomValue(0, 1) == 0)
-        ? 300
-        : -300;
-
-    bola->vel_y = -200;
+    bola->vel_x = 0.0f;
+    bola->vel_y = 0.0f;
 
     bola->raio = BOLA_RAIO;
+
+    *direcao_saque =
+        (GetRandomValue(0, 1) == 0)
+        ? LADO_P1
+        : LADO_P2;
+
+    *tempo_saque = TEMPO_SAQUE;
 }
 
 // ------------------------------------------------------
@@ -154,11 +200,7 @@ void limitar_jogador(Jogador *j, float min_x, float max_x)
 
 // ------------------------------------------------------
 
-void colisao_bola_cabeca(
-    Bola *bola,
-    Jogador *j
-)
-{
+bool colisao_bola_cabeca(Bola *bola, Jogador *j){
     float cabeca_x =
         j->x + j->largura / 2.0f;
 
@@ -170,6 +212,9 @@ void colisao_bola_cabeca(
 
     float distancia =
         sqrtf(dx * dx + dy * dy);
+
+    if (distancia <= 0.0001f)
+        return false;
 
     if (distancia < bola->raio + CABECA_RAIO)
     {
@@ -183,7 +228,11 @@ void colisao_bola_cabeca(
         bola->vel_y = normal_y * forca;
 
         bola->vel_y -= 300;
+
+        return true;
     }
+
+    return false;
 }
 
 // ------------------------------------------------------
@@ -255,6 +304,40 @@ void colisao_rede(Bola *bola)
     }
 }
 
+// Aplica ponto e reinicia o rally quando nao for ponto de ouro.
+static void aplicar_ponto(
+    int jogador_ponto,
+    int *pts1,
+    int *pts2,
+    bool ponto_de_ouro,
+    int *vencedor,
+    Bola *bola,
+    int *lado_toque,
+    int *toques_p1,
+    int *toques_p2,
+    int *direcao_saque,
+    float *tempo_saque
+)
+{
+    if (jogador_ponto == 1)
+        (*pts1)++;
+    else
+        (*pts2)++;
+
+    // Sempre reseta toques e posse para evitar carry over no proximo rally.
+    *lado_toque = LADO_NENHUM;
+    *toques_p1 = MAX_TOQUES;
+    *toques_p2 = MAX_TOQUES;
+
+    if (ponto_de_ouro)
+    {
+        *vencedor = jogador_ponto;
+        return;
+    }
+
+    resetar_bola(bola, direcao_saque, tempo_saque);
+}
+
 // ======================================================
 // FUNÇÃO PRINCIPAL DO JOGO
 // ======================================================
@@ -295,14 +378,22 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
 
     Bola bola;
 
-    resetar_bola(&bola);
-
     int pts1 = 0;
     int pts2 = 0;
 
     float tempo_restante = DURACAO_PARTIDA;
     bool  ponto_de_ouro = false;
     int   vencedor = 0;
+
+    int toques_p1 = MAX_TOQUES;
+    int toques_p2 = MAX_TOQUES;
+    int lado_bola = LADO_NENHUM;  // Lado da bola por posicao (x) para filtrar colisao.
+    int lado_toque = LADO_NENHUM; // Ultimo time que tocou (posse) para reset correto.
+
+    float tempo_saque = 0.0f;
+    int direcao_saque = LADO_P1;
+
+    resetar_bola(&bola, &direcao_saque, &tempo_saque);
     
     while (!WindowShouldClose() && vencedor == 0)
     {
@@ -322,6 +413,9 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
 
         if (vencedor == 0)
         {
+            bool ponto_aplicado = false;
+            bool bola_parada = (tempo_saque > 0.0f);
+
             // PLAYER 1
             mover_jogador(
                 &p1,
@@ -355,29 +449,111 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
                 LARGURA
             );
 
-            // BOLA
-            aplicar_gravidade_bola(&bola, dt);
-
-            colisao_bola_parede(&bola);
-
-            colisao_rede(&bola);
-
-            colisao_bola_cabeca(&bola, &p1);
-
-            colisao_bola_cabeca(&bola, &p2);
-
-            // PONTO
-            if (bola.y + bola.raio >= CHAO_Y)
+            // Contagem regressiva do saque; quando zera, libera a bola.
+            if (bola_parada)
             {
-                if (bola.x < LARGURA / 2.0f)
-                    pts2++;
-                else
-                    pts1++;
+                tempo_saque -= dt;
 
-                if (ponto_de_ouro) {
-                    vencedor = (bola.x < LARGURA / 2.0f) ? 2 : 1;
-                } else {
-                    resetar_bola(&bola);
+                if (tempo_saque <= 0.0f)
+                {
+                    tempo_saque = 0.0f;
+
+                    bola.vel_x =
+                        (direcao_saque == LADO_P1)
+                        ? -VEL_BOLA_X_INICIAL
+                        : VEL_BOLA_X_INICIAL;
+
+                    bola.vel_y = VEL_BOLA_Y_INICIAL;
+
+                    bola_parada = false;
+                }
+            }
+
+            if (!bola_parada)
+            {
+                // BOLA
+                aplicar_gravidade_bola(&bola, dt);
+
+                colisao_bola_parede(&bola);
+
+                colisao_rede(&bola);
+
+                atualizar_lado_bola(&bola, &lado_bola);
+
+                if (!ponto_aplicado && lado_bola == LADO_P1)
+                {
+                    if (colisao_bola_cabeca(&bola, &p1))
+                    {
+                        // Usa posse para resetar toques no primeiro contato do time.
+                        if (!registrar_toque(LADO_P1, &lado_toque, &toques_p1, &toques_p2))
+                        {
+                            // Quarto toque sem reset: ponto do adversario.
+                            aplicar_ponto(
+                                2,
+                                &pts1,
+                                &pts2,
+                                ponto_de_ouro,
+                                &vencedor,
+                                &bola,
+                                &lado_toque,
+                                &toques_p1,
+                                &toques_p2,
+                                &direcao_saque,
+                                &tempo_saque
+                            );
+                            ponto_aplicado = true;
+                        }
+                    }
+                }
+
+                if (!ponto_aplicado && lado_bola == LADO_P2)
+                {
+                    if (colisao_bola_cabeca(&bola, &p2))
+                    {
+                        // Usa posse para resetar toques no primeiro contato do time.
+                        if (!registrar_toque(LADO_P2, &lado_toque, &toques_p1, &toques_p2))
+                        {
+                            // Quarto toque sem reset: ponto do adversario.
+                            aplicar_ponto(
+                                1,
+                                &pts1,
+                                &pts2,
+                                ponto_de_ouro,
+                                &vencedor,
+                                &bola,
+                                &lado_toque,
+                                &toques_p1,
+                                &toques_p2,
+                                &direcao_saque,
+                                &tempo_saque
+                            );
+                            ponto_aplicado = true;
+                        }
+                    }
+                }
+
+                // PONTO
+                if (!ponto_aplicado && bola.y + bola.raio >= CHAO_Y)
+                {
+                    int jogador_ponto =
+                        (bola.x < LARGURA / 2.0f)
+                        ? 2
+                        : 1;
+
+                    aplicar_ponto(
+                        jogador_ponto,
+                        &pts1,
+                        &pts2,
+                        ponto_de_ouro,
+                        &vencedor,
+                        &bola,
+                        &lado_toque,
+                        &toques_p1,
+                        &toques_p2,
+                        &direcao_saque,
+                        &tempo_saque
+                    );
+                    ponto_aplicado = true;
                 }
             }
         }
@@ -387,7 +563,7 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
 
         ClearBackground((Color){135, 206, 235, 255});
 
-        // Timer central (ou "Ponto de ouro!" quando necessario).
+        // Timer central (ou "Ponto de ouro!")
         if (ponto_de_ouro) {
             const char *msg_ouro = "Ponto de ouro!";
             int fs_ouro = 28;
@@ -414,6 +590,24 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
                 fs_timer,
                 BLACK
             );
+        }
+
+        // Seta indica a direcao do saque enquanto a bola esta parada.
+        if (tempo_saque > 0.0f)
+        {
+            float seta_x = LARGURA / 2.0f;
+            float seta_y = 80.0f;
+            float seta_tam = 26.0f;
+
+            Vector2 ponta = {
+                seta_x + ((direcao_saque == LADO_P1) ? -seta_tam : seta_tam),
+                seta_y
+            };
+
+            Vector2 base1 = { seta_x, seta_y - seta_tam / 2.0f };
+            Vector2 base2 = { seta_x, seta_y + seta_tam / 2.0f };
+
+            DrawTriangle(ponta, base1, base2, BLACK);
         }
 
         // Sol
