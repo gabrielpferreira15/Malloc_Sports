@@ -71,8 +71,7 @@ typedef struct {
 // FUNÇÕES AUXILIARES
 // ======================================================
 
-float clampf(float valor, float min, float max)
-{
+float clampf(float valor, float min, float max){
     if (valor < min) return min;
     if (valor > max) return max;
 
@@ -85,20 +84,30 @@ static int lado_bola_por_x(float x){
     return (x < LARGURA / 2.0f) ? LADO_P1 : LADO_P2;
 }
 
-// Reseta os toques quando a bola cruza o meio da quadra.
-static void atualizar_lado_bola(const Bola *bola, int *lado_bola, int *toques_p1,
-    int *toques_p2){
-        int lado_atual = lado_bola_por_x(bola->x);
+// Mantem apenas o lado atual da bola (posicao), sem resetar toques aqui.
+// O reset passa a acontecer no primeiro toque do time, evitando carry over.
+static void atualizar_lado_bola(const Bola *bola, int *lado_bola){
+    *lado_bola = lado_bola_por_x(bola->x);
+}
 
-        if (*lado_bola == LADO_NENHUM || lado_atual != *lado_bola)
-        {
-            *lado_bola = lado_atual;
+// Registra um toque e garante reset correto quando a posse muda de time.
+// Retorna false quando o time estoura o limite de toques.
+static bool registrar_toque(int lado_jogador,int *lado_toque,int *toques_p1,int *toques_p2)
+{
+    int *toques = (lado_jogador == LADO_P1) ? toques_p1 : toques_p2;
 
-            if (lado_atual == LADO_P1)
-                *toques_p1 = MAX_TOQUES;
-            else
-                *toques_p2 = MAX_TOQUES;
-        }
+    // Reset no primeiro toque do time (posse mudou), evitando carry over.
+    if (*lado_toque != lado_jogador)
+    {
+        *lado_toque = lado_jogador;
+        *toques = MAX_TOQUES;
+    }
+
+    if (*toques <= 0)
+        return false;
+
+    (*toques)--;
+    return true;
 }
 
 // ------------------------------------------------------
@@ -303,7 +312,7 @@ static void aplicar_ponto(
     bool ponto_de_ouro,
     int *vencedor,
     Bola *bola,
-    int *lado_bola,
+    int *lado_toque,
     int *toques_p1,
     int *toques_p2,
     int *direcao_saque,
@@ -315,8 +324,8 @@ static void aplicar_ponto(
     else
         (*pts2)++;
 
-    // Sempre reseta toques e lado para evitar carry-over no proximo rally.
-    *lado_bola = LADO_NENHUM;
+    // Sempre reseta toques e posse para evitar carry over no proximo rally.
+    *lado_toque = LADO_NENHUM;
     *toques_p1 = MAX_TOQUES;
     *toques_p2 = MAX_TOQUES;
 
@@ -378,7 +387,8 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
 
     int toques_p1 = MAX_TOQUES;
     int toques_p2 = MAX_TOQUES;
-    int lado_bola = LADO_NENHUM;
+    int lado_bola = LADO_NENHUM;  // Lado da bola por posicao (x) para filtrar colisao.
+    int lado_toque = LADO_NENHUM; // Ultimo time que tocou (posse) para reset correto.
 
     float tempo_saque = 0.0f;
     int direcao_saque = LADO_P1;
@@ -468,18 +478,14 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
 
                 colisao_rede(&bola);
 
-                atualizar_lado_bola(
-                    &bola,
-                    &lado_bola,
-                    &toques_p1,
-                    &toques_p2
-                );
+                atualizar_lado_bola(&bola, &lado_bola);
 
                 if (!ponto_aplicado && lado_bola == LADO_P1)
                 {
                     if (colisao_bola_cabeca(&bola, &p1))
                     {
-                        if (toques_p1 <= 0)
+                        // Usa posse para resetar toques no primeiro contato do time.
+                        if (!registrar_toque(LADO_P1, &lado_toque, &toques_p1, &toques_p2))
                         {
                             // Quarto toque sem reset: ponto do adversario.
                             aplicar_ponto(
@@ -489,17 +495,13 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
                                 ponto_de_ouro,
                                 &vencedor,
                                 &bola,
-                                &lado_bola,
+                                &lado_toque,
                                 &toques_p1,
                                 &toques_p2,
                                 &direcao_saque,
                                 &tempo_saque
                             );
                             ponto_aplicado = true;
-                        }
-                        else
-                        {
-                            toques_p1--;
                         }
                     }
                 }
@@ -508,7 +510,8 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
                 {
                     if (colisao_bola_cabeca(&bola, &p2))
                     {
-                        if (toques_p2 <= 0)
+                        // Usa posse para resetar toques no primeiro contato do time.
+                        if (!registrar_toque(LADO_P2, &lado_toque, &toques_p1, &toques_p2))
                         {
                             // Quarto toque sem reset: ponto do adversario.
                             aplicar_ponto(
@@ -518,17 +521,13 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
                                 ponto_de_ouro,
                                 &vencedor,
                                 &bola,
-                                &lado_bola,
+                                &lado_toque,
                                 &toques_p1,
                                 &toques_p2,
                                 &direcao_saque,
                                 &tempo_saque
                             );
                             ponto_aplicado = true;
-                        }
-                        else
-                        {
-                            toques_p2--;
                         }
                     }
                 }
@@ -548,7 +547,7 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
                         ponto_de_ouro,
                         &vencedor,
                         &bola,
-                        &lado_bola,
+                        &lado_toque,
                         &toques_p1,
                         &toques_p2,
                         &direcao_saque,
