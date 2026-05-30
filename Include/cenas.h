@@ -12,7 +12,8 @@ typedef enum {
     CENA_CORRIDA,
     CENA_VOLEI,
     CENA_RESULTADO,
+    CENA_HIGHSCORES,
     CENA_SAIR
 } Cena;
 
-#endif 
+#endif
