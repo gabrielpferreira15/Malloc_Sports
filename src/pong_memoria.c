@@ -14,11 +14,15 @@
 #define VEL_MAX_Y_ANGULO    500.0f
 #define ACELERACAO_POR_PT     1.1f
 #define DURACAO_PARTIDA      60.0f
+#define TEMPO_SAQUE           1.0f
 #define POWERUP_INTERVALO     8.0f
 #define BOOST_DURACAO         3.0f
 #define BOOST_FATOR           2.0f
 #define MARGEM_RAQUETE        40
 #define NUM_FRAMES 5
+
+#define LADO_P1 1
+#define LADO_P2 2
 
 typedef struct {
     float x, y; // posição atual da bola
@@ -52,12 +56,19 @@ static int circulo_colidiu_retangulo(float cx, float cy, float r,
     return (dx * dx + dy * dy) <= (r * r); // retorna verdadeiro caso tenha tido colisao
 }
 
-static void resetar_bola(Bola *b, float vx, float vy) {
+static void resetar_bola(Bola *b, int *direcao_saque, float *tempo_saque) {
     b->x     = LARGURA / 2.0f; // posição de retorno da bola
     b->y     = ALTURA  / 2.0f;
     b->raio  = BOLA_RAIO; // define o tamanho da bola
-    b->vel_x = (GetRandomValue(0, 1) == 0) ?  vx : -vx; // if/else
-    b->vel_y = (GetRandomValue(0, 1) == 0) ?  vy : -vy;
+    b->vel_x = 0.0f;
+    b->vel_y = 0.0f;
+
+    *direcao_saque =
+        (GetRandomValue(0, 1) == 0)
+        ? LADO_P1
+        : LADO_P2;
+
+    *tempo_saque = TEMPO_SAQUE;
 }
 
 int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
@@ -106,7 +117,10 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
     float vel_x_atual = VEL_BOLA_X_INICIAL;
     float vel_y_atual = VEL_BOLA_Y_INICIAL;
 
-    resetar_bola(&bola, vel_x_atual, vel_y_atual);
+    float tempo_saque = 0.0f;
+    int direcao_saque = LADO_P1;
+
+    resetar_bola(&bola, &direcao_saque, &tempo_saque);
 
     int pts1 = 0, pts2 = 0;
 
@@ -206,199 +220,223 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
         r1.y = clampf(r1.y, 0.0f, ALTURA - RAQUETE_H);
         r2.y = clampf(r2.y, 0.0f, ALTURA - RAQUETE_H);
 
-        // Update da bola
-        bola.x += bola.vel_x * dt;
-        bola.y += bola.vel_y * dt;
+        bool bola_parada = (tempo_saque > 0.0f);
 
-        if (bola.y - bola.raio < 0) {
-            bola.y     = (float)bola.raio;
-            bola.vel_y = fabsf(bola.vel_y);
-        }
+        if (bola_parada) {
+            tempo_saque -= dt;
 
-        if (bola.y + bola.raio > ALTURA) {
-            bola.y     = ALTURA - (float)bola.raio;
-            bola.vel_y = -fabsf(bola.vel_y);
-        }
+            if (tempo_saque <= 0.0f) {
+                tempo_saque = 0.0f;
 
-        // Colisão com raquete 1
-        if (bola.vel_x < 0 &&
-            circulo_colidiu_retangulo(
-                bola.x, bola.y,
-                (float)bola.raio,
-                r1.x, r1.y,
-                RAQUETE_W, RAQUETE_H)) {
+                bola.vel_x =
+                    (direcao_saque == LADO_P1)
+                    ? -vel_x_atual
+                    :  vel_x_atual;
 
-            // ATIVA O EFEITO DE IMPACTO
-            mostrando_impacto = true;
-            tempo_impacto = 0.12f;
+                bola.vel_y =
+                    (GetRandomValue(0, 1) == 0)
+                    ?  vel_y_atual
+                    : -vel_y_atual;
 
-            bola.x     = r1.x + RAQUETE_W + (float)bola.raio;
-            bola.vel_x = fabsf(bola.vel_x);
-
-            float offset =
-                (bola.y - (r1.y + RAQUETE_H / 2.0f))
-                / (RAQUETE_H / 2.0f);
-
-            bola.vel_y = aplicar_boost(
-                VEL_MAX_Y_ANGULO * offset,
-                boost_ativo
-            );
-
-            // =========================
-            // AUMENTO DE VELOCIDADE
-            // =========================
-            if (contador_rebates < LIMITE_REBATES) {
-
-                contador_rebates++;
-
-                float sinal_x =
-                    (bola.vel_x > 0) ? 1.0f : -1.0f;
-
-                bola.vel_x = aplicar_boost(
-                    sinal_x *
-                    (VEL_BOLA_X_INICIAL +
-                    contador_rebates *
-                    ACELERACAO_REBATE_BOLA),
-                    boost_ativo
-                );
-
-                velocidade_raquete =
-                    VEL_RAQUETE +
-                    contador_rebates *
-                    ACELERACAO_REBATE_RAQUETE;
+                bola_parada = false;
             }
         }
 
-        // Colisão com raquete 2
-        if (bola.vel_x > 0 &&
-            circulo_colidiu_retangulo(
-                bola.x, bola.y,
-                (float)bola.raio,
-                r2.x, r2.y,
-                RAQUETE_W, RAQUETE_H)) {
+        if (!bola_parada) {
+            // Update da bola
+            bola.x += bola.vel_x * dt;
+            bola.y += bola.vel_y * dt;
 
-            // ATIVA O EFEITO DE IMPACTO
-            mostrando_impacto = true;
-            tempo_impacto = 0.12f;
+            if (bola.y - bola.raio < 0) {
+                bola.y     = (float)bola.raio;
+                bola.vel_y = fabsf(bola.vel_y);
+            }
 
-            bola.x     = r2.x - (float)bola.raio;
-            bola.vel_x = -fabsf(bola.vel_x);
+            if (bola.y + bola.raio > ALTURA) {
+                bola.y     = ALTURA - (float)bola.raio;
+                bola.vel_y = -fabsf(bola.vel_y);
+            }
 
-            float offset =
-                (bola.y - (r2.y + RAQUETE_H / 2.0f))
-                / (RAQUETE_H / 2.0f);
+            // Colisão com raquete 1
+            if (bola.vel_x < 0 &&
+                circulo_colidiu_retangulo(
+                    bola.x, bola.y,
+                    (float)bola.raio,
+                    r1.x, r1.y,
+                    RAQUETE_W, RAQUETE_H)) {
 
-            bola.vel_y = aplicar_boost(
-                VEL_MAX_Y_ANGULO * offset,
-                boost_ativo
-            );
+                // ATIVA O EFEITO DE IMPACTO
+                mostrando_impacto = true;
+                tempo_impacto = 0.12f;
 
-            // =========================
-            // AUMENTO DE VELOCIDADE
-            // =========================
-            if (contador_rebates < LIMITE_REBATES) {
+                bola.x     = r1.x + RAQUETE_W + (float)bola.raio;
+                bola.vel_x = fabsf(bola.vel_x);
 
-                contador_rebates++;
+                float offset =
+                    (bola.y - (r1.y + RAQUETE_H / 2.0f))
+                    / (RAQUETE_H / 2.0f);
 
-                float sinal_x =
-                    (bola.vel_x > 0) ? 1.0f : -1.0f;
-
-                bola.vel_x = aplicar_boost(
-                    sinal_x *
-                    (VEL_BOLA_X_INICIAL +
-                    contador_rebates *
-                    ACELERACAO_REBATE_BOLA),
+                bola.vel_y = aplicar_boost(
+                    VEL_MAX_Y_ANGULO * offset,
                     boost_ativo
                 );
 
-                velocidade_raquete =
-                    VEL_RAQUETE +
-                    contador_rebates *
-                    ACELERACAO_REBATE_RAQUETE;
+                // =========================
+                // AUMENTO DE VELOCIDADE
+                // =========================
+                if (contador_rebates < LIMITE_REBATES) {
+
+                    contador_rebates++;
+
+                    float sinal_x =
+                        (bola.vel_x > 0) ? 1.0f : -1.0f;
+
+                    bola.vel_x = aplicar_boost(
+                        sinal_x *
+                        (VEL_BOLA_X_INICIAL +
+                        contador_rebates *
+                        ACELERACAO_REBATE_BOLA),
+                        boost_ativo
+                    );
+
+                    velocidade_raquete =
+                        VEL_RAQUETE +
+                        contador_rebates *
+                        ACELERACAO_REBATE_RAQUETE;
+                }
             }
-        }
 
-        float vel_max_x =
-            boost_ativo
-            ? VEL_MAX_X * BOOST_FATOR
-            : VEL_MAX_X;
+            // Colisão com raquete 2
+            if (bola.vel_x > 0 &&
+                circulo_colidiu_retangulo(
+                    bola.x, bola.y,
+                    (float)bola.raio,
+                    r2.x, r2.y,
+                    RAQUETE_W, RAQUETE_H)) {
 
-        if (fabsf(bola.vel_x) > vel_max_x)
-            bola.vel_x =
-                (bola.vel_x > 0)
-                ? vel_max_x
-                : -vel_max_x;
+                // ATIVA O EFEITO DE IMPACTO
+                mostrando_impacto = true;
+                tempo_impacto = 0.12f;
 
-        // Ponto para P2
-        if (bola.x + bola.raio < 0) {
+                bola.x     = r2.x - (float)bola.raio;
+                bola.vel_x = -fabsf(bola.vel_x);
 
-            pts2++;
+                float offset =
+                    (bola.y - (r2.y + RAQUETE_H / 2.0f))
+                    / (RAQUETE_H / 2.0f);
 
-            flash_p1 = FLASH_DUR;
+                bola.vel_y = aplicar_boost(
+                    VEL_MAX_Y_ANGULO * offset,
+                    boost_ativo
+                );
 
-            vel_x_atual = clampf(
-                vel_x_atual * ACELERACAO_POR_PT,
-                VEL_BOLA_X_INICIAL,
-                VEL_MAX_X * 0.8f
-            );
+                // =========================
+                // AUMENTO DE VELOCIDADE
+                // =========================
+                if (contador_rebates < LIMITE_REBATES) {
 
-            vel_y_atual = clampf(
-                vel_y_atual * ACELERACAO_POR_PT,
-                VEL_BOLA_Y_INICIAL,
-                VEL_MAX_Y_ANGULO * 0.6f
-            );
+                    contador_rebates++;
 
-            boost_ativo = false;
-            boost_restante = 0.0f;
+                    float sinal_x =
+                        (bola.vel_x > 0) ? 1.0f : -1.0f;
 
-            powerup_ativo = false;
-            timer_powerup = POWERUP_INTERVALO;
+                    bola.vel_x = aplicar_boost(
+                        sinal_x *
+                        (VEL_BOLA_X_INICIAL +
+                        contador_rebates *
+                        ACELERACAO_REBATE_BOLA),
+                        boost_ativo
+                    );
 
-            // RESET SISTEMA DE REBATES
-            contador_rebates = 0;
-            velocidade_raquete = VEL_RAQUETE;
+                    velocidade_raquete =
+                        VEL_RAQUETE +
+                        contador_rebates *
+                        ACELERACAO_REBATE_RAQUETE;
+                }
+            }
 
-            resetar_bola(&bola, vel_x_atual, vel_y_atual);
+            float vel_max_x =
+                boost_ativo
+                ? VEL_MAX_X * BOOST_FATOR
+                : VEL_MAX_X;
 
-            // Em ponto de ouro, o primeiro a marcar vence imediatamente.
-            if (ponto_de_ouro)
-                vencedor = 2;
-        }
+            if (fabsf(bola.vel_x) > vel_max_x)
+                bola.vel_x =
+                    (bola.vel_x > 0)
+                    ? vel_max_x
+                    : -vel_max_x;
 
-        // Ponto para P1
-        if (bola.x - bola.raio > LARGURA) {
+            // Ponto para P2
+            if (bola.x + bola.raio < 0) {
 
-            pts1++;
+                pts2++;
 
-            flash_p2 = FLASH_DUR;
+                flash_p1 = FLASH_DUR;
 
-            vel_x_atual = clampf(
-                vel_x_atual * ACELERACAO_POR_PT,
-                VEL_BOLA_X_INICIAL,
-                VEL_MAX_X * 0.8f
-            );
+                vel_x_atual = clampf(
+                    vel_x_atual * ACELERACAO_POR_PT,
+                    VEL_BOLA_X_INICIAL,
+                    VEL_MAX_X * 0.8f
+                );
 
-            vel_y_atual = clampf(
-                vel_y_atual * ACELERACAO_POR_PT,
-                VEL_BOLA_Y_INICIAL,
-                VEL_MAX_Y_ANGULO * 0.6f
-            );
+                vel_y_atual = clampf(
+                    vel_y_atual * ACELERACAO_POR_PT,
+                    VEL_BOLA_Y_INICIAL,
+                    VEL_MAX_Y_ANGULO * 0.6f
+                );
 
-            boost_ativo = false;
-            boost_restante = 0.0f;
+                boost_ativo = false;
+                boost_restante = 0.0f;
 
-            powerup_ativo = false;
-            timer_powerup = POWERUP_INTERVALO;
+                powerup_ativo = false;
+                timer_powerup = POWERUP_INTERVALO;
 
-            // RESET SISTEMA DE REBATES
-            contador_rebates = 0;
-            velocidade_raquete = VEL_RAQUETE;
+                // RESET SISTEMA DE REBATES
+                contador_rebates = 0;
+                velocidade_raquete = VEL_RAQUETE;
 
-            resetar_bola(&bola, vel_x_atual, vel_y_atual);
+                resetar_bola(&bola, &direcao_saque, &tempo_saque);
 
-            // Em ponto de ouro, o primeiro a marcar vence imediatamente.
-            if (ponto_de_ouro)
-                vencedor = 1;
+                // Em ponto de ouro, o primeiro a marcar vence imediatamente.
+                if (ponto_de_ouro)
+                    vencedor = 2;
+            }
+
+            // Ponto para P1
+            if (bola.x - bola.raio > LARGURA) {
+
+                pts1++;
+
+                flash_p2 = FLASH_DUR;
+
+                vel_x_atual = clampf(
+                    vel_x_atual * ACELERACAO_POR_PT,
+                    VEL_BOLA_X_INICIAL,
+                    VEL_MAX_X * 0.8f
+                );
+
+                vel_y_atual = clampf(
+                    vel_y_atual * ACELERACAO_POR_PT,
+                    VEL_BOLA_Y_INICIAL,
+                    VEL_MAX_Y_ANGULO * 0.6f
+                );
+
+                boost_ativo = false;
+                boost_restante = 0.0f;
+
+                powerup_ativo = false;
+                timer_powerup = POWERUP_INTERVALO;
+
+                // RESET SISTEMA DE REBATES
+                contador_rebates = 0;
+                velocidade_raquete = VEL_RAQUETE;
+
+                resetar_bola(&bola, &direcao_saque, &tempo_saque);
+
+                // Em ponto de ouro, o primeiro a marcar vence imediatamente.
+                if (ponto_de_ouro)
+                    vencedor = 1;
+            }
         }
 
         // Powerup
@@ -423,7 +461,7 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
             timer_powerup = POWERUP_INTERVALO;
         }
 
-        if (powerup_ativo) {
+        if (powerup_ativo && tempo_saque <= 0.0f) {
 
             float dx = bola.x - powerup_x;
             float dy = bola.y - powerup_y;
@@ -573,6 +611,29 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
                 );
             }
 
+            if (tempo_saque > 0.0f) {
+                float dir = (direcao_saque == LADO_P1) ? -1.0f : 1.0f;
+                float seta_tam = 18.0f;
+                float base_offset = bola.raio + 12.0f;
+                float ponta_offset = base_offset + seta_tam;
+                float base_x = bola.x + dir * base_offset;
+                float seta_y = bola.y;
+
+                Vector2 ponta = {
+                    bola.x + dir * ponta_offset,
+                    seta_y
+                };
+
+                Vector2 base1 = { base_x, seta_y - seta_tam / 2.0f };
+                Vector2 base2 = { base_x, seta_y + seta_tam / 2.0f };
+
+                if (dir < 0.0f) {
+                    DrawTriangle(ponta, base2, base1, RAYWHITE);
+                } else {
+                    DrawTriangle(ponta, base1, base2, RAYWHITE);
+                }
+            }
+
             if (powerup_ativo) {
 
                 DrawCircle(
@@ -593,17 +654,17 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
 
             DrawText(
                 TextFormat("%d", pts1),
-                LARGURA / 2 - 80,
-                20,
-                60,
+                LARGURA / 2 - 70,
+                52,
+                36,
                 WHITE
             );
 
             DrawText(
                 TextFormat("%d", pts2),
                 LARGURA / 2 + 40,
-                20,
-                60,
+                52,
+                36,
                 WHITE
             );
 
