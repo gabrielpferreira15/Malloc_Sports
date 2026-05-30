@@ -1,76 +1,26 @@
-/* ============================================================
- * menu.c — IMPLEMENTAÇÃO de todas as telas de UI
- * ------------------------------------------------------------
- * Dono: DEV 3 — Gabriel Mendes
- *
- * COMO ESTRUTURAR CADA TELA (padrão geral)
- *
- *   Cena tela_X(void) {
- *       while (!WindowShouldClose()) {
- *           // ----- INPUT -----
- *           if (IsKeyPressed(KEY_ENTER))  return CENA_PROXIMA;
- *           if (IsKeyPressed(KEY_ESCAPE)) return CENA_VOLTAR;
- *
- *           // ----- DRAW -----
- *           BeginDrawing();
- *           ClearBackground(BLACK);
- *           // DrawText, DrawRectangle, etc.
- *           EndDrawing();
- *       }
- *       return CENA_SAIR;  // janela fechada
- *   }
- *
- * SUGESTOES TELA POR TELA
- *
- *   --- tela_splash ---
- *   Mostra "MALLOC SPORTS" digitando letra por letra (efeito
- *   terminal). Use GetTime() ou um contador de frames pra
- *   revelar uma letra a cada N ms.
- *   Apos 2 segundos, retorna CENA_MENU.
- *
- *   Variaveis sugeridas:
- *     float tempo_inicio = GetTime();
- *     int letras_visiveis = 0;
- *     const char *título = "MALLOC SPORTS";
- *
- *   --- tela_menu_principal ---
- *   3 opções: Jogar (Que abre uma tela com as opções de "Minigame Único" e "Torneio"), Configurações, Sair.
- *
- *   Variaveis sugeridas:
- *     int opcao_selecionada = 0;  // 0..3
- *     const char *opções[3] = {"Jogar", "Configurações", "Sair"};
- *
- *   KEY_UP / KEY_DOWN -> mexe opcao_selecionada (com wrap-around).
- *   KEY_ENTER -> retorna a cena correspondente.
- *
- *   No DRAW: itera sobre as opções; pinta a opcao_selecionada
- *   com cor diferente.
- */ 
-
+#include <string.h>
 #include "raylib.h"
 #include "menu.h"
 #include "cenas.h"
+#include "scores.h"
 
 /* ------------------------------------------------------------------ */
-/*  Helpers de UI                                                      */
+/*  Helpers de UI                                                       */
 /* ------------------------------------------------------------------ */
 
-// Retorna true se o mouse está sobre o retângulo e o botão foi solto. 
 static bool botao_clicado(Rectangle r) {
     return CheckCollisionPointRec(GetMousePosition(), r)
         && IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
 }
 
-// Desenha um botão arredondado.
-// highlighted == true → cor de destaque (amarelo). 
 static void desenhar_botao(Rectangle r, const char *label, bool highlighted) {
     bool hover = CheckCollisionPointRec(GetMousePosition(), r);
 
     Color fundo;
     if (highlighted)
-        fundo = hover ? (Color){220, 180, 0, 255} : (Color){255, 210, 0, 255};
+        fundo = hover ? (Color){220, 180,   0, 255} : (Color){255, 210, 0, 255};
     else
-        fundo = hover ? (Color){70, 70, 70, 255} : (Color){45, 45, 45, 255};
+        fundo = hover ? (Color){ 70,  70,  70, 255} : (Color){ 45,  45, 45, 255};
 
     DrawRectangleRounded(r, 0.25f, 12, fundo);
     DrawRectangleRoundedLines(r, 0.25f, 12, RAYWHITE);
@@ -79,74 +29,71 @@ static void desenhar_botao(Rectangle r, const char *label, bool highlighted) {
     int tw = MeasureText(label, fs);
     Color cor_texto = highlighted ? BLACK : RAYWHITE;
     DrawText(label,
-            (int)(r.x + r.width  / 2 - tw / 2),
-            (int)(r.y + r.height / 2 - fs / 2),
-            fs, cor_texto);
+        (int)(r.x + r.width  / 2 - tw / 2),
+        (int)(r.y + r.height / 2 - fs / 2),
+        fs, cor_texto);
 }
 
 /* ------------------------------------------------------------------ */
-/*  tela_menu_principal                                               */
+/*  tela_menu_principal                                                 */
 /* ------------------------------------------------------------------ */
-
 Cena tela_menu_principal(void) {
     const int W = GetScreenWidth();
     const int H = GetScreenHeight();
 
-    // Botões centralizados verticalmente 
-    float bx  = W / 2.0f - 180;
-    Rectangle btn_jogar = { bx, H / 2.0f - 60, 360, 60 };
-    Rectangle btn_sair  = { bx, H / 2.0f + 20,  360, 60 };
+    float bx = W / 2.0f - 180;
+    /* Três botões com 80 px de espaçamento entre si. */
+    Rectangle btn_jogar       = { bx, H / 2.0f - 100, 360, 60 };
+    Rectangle btn_highscores  = { bx, H / 2.0f -  20, 360, 60 };
+    Rectangle btn_sair        = { bx, H / 2.0f +  60, 360, 60 };
 
     Cena cena_atual = CENA_MENU;
 
     while (!WindowShouldClose()) {
-        Cena prox_cena = cena_atual;
+        Cena prox = cena_atual;
 
-        // ----- INPUT ----- 
-        if (botao_clicado(btn_jogar)) prox_cena = CENA_SELECAO_MODO;
-        else if (botao_clicado(btn_sair))  prox_cena = CENA_SAIR;
-        else if (IsKeyPressed(KEY_ESCAPE)) prox_cena = CENA_SAIR;
+        if (botao_clicado(btn_jogar))      prox = CENA_SELECAO_MODO;
+        else if (botao_clicado(btn_highscores)) prox = CENA_HIGHSCORES;
+        else if (botao_clicado(btn_sair))  prox = CENA_SAIR;
+        else if (IsKeyPressed(KEY_ESCAPE)) prox = CENA_SAIR;
 
-        // ----- DRAW ----- 
         BeginDrawing();
             ClearBackground((Color){18, 22, 35, 255});
 
-
-            // Título 
+            /* Título */
             const char *titulo = "MALLOC SPORTS";
             int ts = 64;
             DrawText(titulo,
-                    W / 2 - MeasureText(titulo, ts) / 2,
-                    H / 2 - 200, ts, RAYWHITE);
+                W / 2 - MeasureText(titulo, ts) / 2,
+                H / 2 - 210, ts, RAYWHITE);
 
-            // Subtítulo
+            /* Subtítulo */
             const char *sub = "Minigames esportivos multiplayer";
             DrawText(sub,
-                    W / 2 - MeasureText(sub, 22) / 2,
-                    H / 2 - 120, 22, LIGHTGRAY);
+                W / 2 - MeasureText(sub, 22) / 2,
+                H / 2 - 130, 22, LIGHTGRAY);
 
-            // Linha decorativa
-            DrawLine(W / 2 - 200, H / 2 - 90, W / 2 + 200, H / 2 - 90,
+            /* Linha decorativa */
+            DrawLine(W / 2 - 200, H / 2 - 108,
+                    W / 2 + 200, H / 2 - 108,
                     (Color){80, 80, 80, 200});
 
-            desenhar_botao(btn_jogar, "Jogar",  true);
-            desenhar_botao(btn_sair,  "Sair",   false);
+            desenhar_botao(btn_jogar,      "Jogar",                true);
+            desenhar_botao(btn_highscores, "Highscores - Torneio", false);
+            desenhar_botao(btn_sair,       "Sair",                 false);
 
-            // Dica de controles
-            DrawText("Controles:  P1 = W/S     P2 = Setas",
-                    W / 2 - MeasureText("Controles:  P1 = W/S     P2 = Setas", 18) / 2,
-                    H - 40, 18, DARKGRAY);
-
+            DrawText("Controles:  P1 = W/S/A/D     P2 = Setas",
+                W / 2 - MeasureText("Controles:  P1 = W/S/A/D     P2 = Setas", 18) / 2,
+                H - 40, 18, DARKGRAY);
         EndDrawing();
-        
-        if (prox_cena != cena_atual) return prox_cena;
-    }
 
+        if (prox != cena_atual) return prox;
+    }
     return CENA_SAIR;
 }
 
 /* ------------------------------------------------------------------ */
-/*  tela_selecao_modo                                                 */
+/*  tela_selecao_modo                                                   */
 /* ------------------------------------------------------------------ */
 Cena tela_selecao_modo(EstadoTorneio *t) {
     const int W = GetScreenWidth();
@@ -159,211 +106,386 @@ Cena tela_selecao_modo(EstadoTorneio *t) {
     Cena cena_atual = CENA_SELECAO_MODO;
 
     while (!WindowShouldClose()) {
-        Cena prox_cena = cena_atual;
+        Cena prox = cena_atual;
 
         if (botao_clicado(btn_avulso)) {
-            prox_cena = CENA_SELECAO_MINIGAME;
-        }
-        else if (botao_clicado(btn_torneio)) {
-            iniciar_torneio(t);
-            prox_cena = proxima_cena_torneio(t);
-        }
-        else if (IsKeyPressed(KEY_ESCAPE)) {
-            prox_cena = CENA_MENU;
+            prox = CENA_SELECAO_MINIGAME;
+        } else if (botao_clicado(btn_torneio)) {
+            iniciar_torneio(t); 
+            tela_inserir_nomes(t->nomes[0], t->nomes[1]);
+            prox = proxima_cena_torneio(t);
+        } else if (IsKeyPressed(KEY_ESCAPE)) {
+            prox = CENA_MENU;
         }
 
         BeginDrawing();
-        ClearBackground((Color){18, 22, 35, 255});
-        
-        DrawText("SELECIONE O MODO", W/2 - MeasureText("SELECIONE O MODO", 40)/2, H/2 - 150, 40, RAYWHITE);
-        
-        desenhar_botao(btn_avulso, "Minigame Único", true);
-        desenhar_botao(btn_torneio, "Torneio", false);
-
-        DrawText("ESC = Voltar", W/2 - MeasureText("ESC = Voltar", 18)/2, H - 40, 18, DARKGRAY);
-
+            ClearBackground((Color){18, 22, 35, 255});
+            DrawText("SELECIONE O MODO",
+                W / 2 - MeasureText("SELECIONE O MODO", 40) / 2,
+                H / 2 - 150, 40, RAYWHITE);
+            desenhar_botao(btn_avulso,  "Minigame Único", true);
+            desenhar_botao(btn_torneio, "Torneio",        false);
+            DrawText("ESC = Voltar",
+                W / 2 - MeasureText("ESC = Voltar", 18) / 2,
+                H - 40, 18, DARKGRAY);
         EndDrawing();
-        
-        if (prox_cena != cena_atual) return prox_cena;
+
+        if (prox != cena_atual) return prox;
     }
     return CENA_SAIR;
 }
 
 /* ------------------------------------------------------------------ */
-/*  tela_selecao_minigame                                             */
+/*  tela_selecao_minigame                                               */
 /* ------------------------------------------------------------------ */
 Cena tela_selecao_minigame(void) {
     const int W = GetScreenWidth();
     const int H = GetScreenHeight();
 
-    int opcao_selecionada = 0; // 0=Corrida, 1=Pong, 2=Volei
+    int opcao = 0;
     Cena cena_atual = CENA_SELECAO_MINIGAME;
-    
-    while (!WindowShouldClose()) {
-        Cena prox_cena = cena_atual;
 
-        if (IsKeyPressed(KEY_RIGHT)) {
-            opcao_selecionada = (opcao_selecionada + 1) % 3;
-        }
-        if (IsKeyPressed(KEY_LEFT)) {
-            opcao_selecionada = (opcao_selecionada - 1 + 3) % 3; 
-        }
+    while (!WindowShouldClose()) {
+        Cena prox = cena_atual;
+
+        if (IsKeyPressed(KEY_RIGHT)) opcao = (opcao + 1) % 3;
+        if (IsKeyPressed(KEY_LEFT))  opcao = (opcao - 1 + 3) % 3;
         if (IsKeyPressed(KEY_ENTER)) {
-            if (opcao_selecionada == 0) prox_cena = CENA_CORRIDA;
-            if (opcao_selecionada == 1) prox_cena = CENA_PONG;
-            if (opcao_selecionada == 2) prox_cena = CENA_VOLEI;
+            if (opcao == 0) prox = CENA_CORRIDA;
+            if (opcao == 1) prox = CENA_PONG;
+            if (opcao == 2) prox = CENA_VOLEI;
         }
-        if (IsKeyPressed(KEY_ESCAPE)) prox_cena = CENA_SELECAO_MODO;
+        if (IsKeyPressed(KEY_ESCAPE)) prox = CENA_SELECAO_MODO;
 
         Rectangle card_corrida = { W / 2.0f - 340, H / 2.0f - 100, 200, 200 };
         Rectangle card_pong    = { W / 2.0f - 100, H / 2.0f - 100, 200, 200 };
         Rectangle card_volei   = { W / 2.0f + 140, H / 2.0f - 100, 200, 200 };
 
-        if (botao_clicado(card_corrida)) prox_cena = CENA_CORRIDA;
-        else if (botao_clicado(card_pong)) prox_cena = CENA_PONG;
-        else if (botao_clicado(card_volei)) prox_cena = CENA_VOLEI;
+        if (botao_clicado(card_corrida)) prox = CENA_CORRIDA;
+        else if (botao_clicado(card_pong))   prox = CENA_PONG;
+        else if (botao_clicado(card_volei))  prox = CENA_VOLEI;
 
         BeginDrawing();
-        ClearBackground((Color){18, 22, 35, 255});
-
-        DrawText("SELECIONE O JOGO", W/2 - MeasureText("SELECIONE O JOGO", 40)/2, H/2 - 200, 40, RAYWHITE);
-
-        desenhar_botao(card_corrida, "Corrida", opcao_selecionada == 0);
-        desenhar_botao(card_pong, "Pong", opcao_selecionada == 1);
-        desenhar_botao(card_volei, "Vôlei", opcao_selecionada == 2);
-
-        DrawText("USE AS SETAS E ENTER", W/2 - MeasureText("USE AS SETAS E ENTER", 20)/2, H/2 + 150, 20, LIGHTGRAY);
-        DrawText("ESC = Voltar", W/2 - MeasureText("ESC = Voltar", 18)/2, H - 40, 18, DARKGRAY);
-
+            ClearBackground((Color){18, 22, 35, 255});
+            DrawText("SELECIONE O JOGO",
+                W / 2 - MeasureText("SELECIONE O JOGO", 40) / 2,
+                H / 2 - 200, 40, RAYWHITE);
+            desenhar_botao(card_corrida, "Corrida", opcao == 0);
+            desenhar_botao(card_pong,    "Pong",    opcao == 1);
+            desenhar_botao(card_volei,   "Vôlei",   opcao == 2);
+            DrawText("USE AS SETAS E ENTER",
+                W / 2 - MeasureText("USE AS SETAS E ENTER", 20) / 2,
+                H / 2 + 150, 20, LIGHTGRAY);
+            DrawText("ESC = Voltar",
+                W / 2 - MeasureText("ESC = Voltar", 18) / 2,
+                H - 40, 18, DARKGRAY);
         EndDrawing();
 
-        if (prox_cena != cena_atual) return prox_cena;
+        if (prox != cena_atual) return prox;
     }
     return CENA_SAIR;
 }
 
 /* ------------------------------------------------------------------ */
-/*  tela_resultado                                                    */
+/*  tela_resultado                                                      */
 /* ------------------------------------------------------------------ */
 Cena tela_resultado(ResultadoPartida r) {
     const int W = GetScreenWidth();
     const int H = GetScreenHeight();
 
     float bx = W / 2.0f - 180;
-    Rectangle btn_revanche = { bx, H / 2.0f + 40,  360, 60 };
-    Rectangle btn_menu     = { bx, H / 2.0f + 120, 360, 60 };
+    Rectangle btn_principal = { bx, H / 2.0f + 40,  360, 60 };
+    Rectangle btn_menu      = { bx, H / 2.0f + 120, 360, 60 };
 
-    // Mensagem do vencedor 
+    /* Mensagem de vencedor */
     const char *msg_venc;
-    if (r.vencedor == 1) msg_venc = "Jogador 1 venceu!";
-    else if (r.vencedor == 2) msg_venc = "Jogador 2 venceu!";
-    else msg_venc = "Empate!";
-
     if (r.torneio_final) {
-        if (r.vencedor == 1) msg_venc = "Jogador 1 venceu o Torneio!";
+        if      (r.vencedor == 1) msg_venc = "Jogador 1 venceu o Torneio!";
         else if (r.vencedor == 2) msg_venc = "Jogador 2 venceu o Torneio!";
-        else msg_venc = "Torneio Empatado!";
+        else                      msg_venc = "Torneio Empatado!";
+    } else {
+        if      (r.vencedor == 1) msg_venc = "Jogador 1 venceu!";
+        else if (r.vencedor == 2) msg_venc = "Jogador 2 venceu!";
+        else                      msg_venc = "Empate!";
     }
 
-    // Texto do botão principal (destaque)
-    const char *texto_btn_principal = "Revanche";
-    if (r.torneio_final) texto_btn_principal = "Voltar ao Menu";
-    else if (r.em_torneio) texto_btn_principal = "Próximo Jogo";
-    
-    // Placar formatado
-    char placar[32];
-    int n = 0;
-    const char *fmt = TextFormat("%d  x  %d", r.pontos_p1, r.pontos_p2);
-    while (fmt[n] && n < 31) { placar[n] = fmt[n]; n++; }
-    placar[n] = '\0';
+    /* Texto do botão principal */
+    const char *texto_btn;
+    if (r.torneio_final)   texto_btn = "Voltar ao Menu";
+    else if (r.em_torneio) texto_btn = "Próximo Jogo";
+    else                   texto_btn = "Revanche";
+
+    /* Fonte de pontuação: menor para números grandes (torneio final). */
+    int pts_fs = r.torneio_final ? 44 : 80;
+
+    /* Label de contexto acima dos números. */
+    const char *label_ctx = r.torneio_final
+        ? "Pontuação total do torneio"
+        : NULL;
 
     Cena cena_atual = CENA_RESULTADO;
 
     while (!WindowShouldClose()) {
-        Cena prox_cena = cena_atual;
+        Cena prox = cena_atual;
 
-        // ----- INPUT ----- 
-        if (botao_clicado(btn_revanche) || IsKeyPressed(KEY_ENTER)) {
-            if (r.torneio_final) prox_cena = CENA_MENU;
-            else if (r.em_torneio) prox_cena = CENA_PONG; // Retorna PONG genérico para sinalizar 'Próximo', o main decide
-            else prox_cena = r.ultimo_jogo; // Retorna o jogo que acabamos jogar
+        if (botao_clicado(btn_principal) || IsKeyPressed(KEY_ENTER)) {
+            if (r.torneio_final)   prox = CENA_MENU;
+            else if (r.em_torneio) prox = CENA_PONG;   /* sinal "Próximo" para o main */
+            else                   prox = r.ultimo_jogo;
         }
-        
         if (!r.torneio_final) {
             if (botao_clicado(btn_menu) || IsKeyPressed(KEY_ESCAPE))
-                prox_cena = CENA_MENU;
+                prox = CENA_MENU;
         }
 
-        // ----- DRAW ----- 
         BeginDrawing();
             ClearBackground(BLACK);
-
-            // Faixa superior colorida (amarelo para o vencedor) 
             DrawRectangle(0, 0, W, 8, (Color){255, 210, 0, 255});
 
-            if (r.torneio_final) {
-                DrawText("RESULTADO DO TORNEIO", W / 2 - MeasureText("RESULTADO DO TORNEIO", 30) / 2, 40, 30, GOLD);
-            }
+            if (r.torneio_final)
+                DrawText("RESULTADO DO TORNEIO",
+                    W / 2 - MeasureText("RESULTADO DO TORNEIO", 30) / 2,
+                    18, 30, GOLD);
 
-            // Nome do vencedor 
+            /* Vencedor */
             int mv = 48;
             DrawText(msg_venc,
-                    W / 2 - MeasureText(msg_venc, mv) / 2,
-                    H / 2 - 140, mv, YELLOW);
+                W / 2 - MeasureText(msg_venc, mv) / 2,
+                H / 2 - 150, mv, YELLOW);
 
-            // Placar 
-            const char *label_p1 = "P1";
-            const char *label_p2 = "P2";
-            int pts_fs = 80;
-            int label_fs = 24;
+            /* Contexto (torneio final) */
+            if (label_ctx)
+                DrawText(label_ctx,
+                    W / 2 - MeasureText(label_ctx, 20) / 2,
+                    H / 2 - 90, 20, LIGHTGRAY);
 
-            // P1
-            DrawText(label_p1,
-                    W / 2 - 140 - MeasureText(label_p1, label_fs) / 2,
-                    H / 2 - 60, label_fs, LIGHTGRAY);
-            DrawText(TextFormat("%d", r.pontos_p1),
-                    W / 2 - 140 - MeasureText("0", pts_fs) / 2,
-                    H / 2 - 30, pts_fs,
-                    r.vencedor == 1 ? YELLOW : GRAY);
+            /* Placar */
+            const char *str_p1 = TextFormat("%d", r.pontos_p1);
+            const char *str_p2 = TextFormat("%d", r.pontos_p2);
 
-            // Separador
+            /* P1 */
+            DrawText("P1",
+                W / 2 - 160 - MeasureText("P1", 24) / 2,
+                H / 2 - 60, 24, LIGHTGRAY);
+            DrawText(str_p1,
+                W / 2 - 160 - MeasureText(str_p1, pts_fs) / 2,
+                H / 2 - 30, pts_fs,
+                r.vencedor == 1 ? YELLOW : GRAY);
+
+            /* Separador */
             DrawText("x",
-                    W / 2 - MeasureText("x", pts_fs) / 2,
-                    H / 2 - 30, pts_fs, DARKGRAY);
+                W / 2 - MeasureText("x", pts_fs) / 2,
+                H / 2 - 30, pts_fs, DARKGRAY);
 
-            // P2
-            DrawText(label_p2,
-                    W / 2 + 140 - MeasureText(label_p2, label_fs) / 2,
-                    H / 2 - 60, label_fs, LIGHTGRAY);
+            /* P2 */
+            DrawText("P2",
+                W / 2 + 160 - MeasureText("P2", 24) / 2,
+                H / 2 - 60, 24, LIGHTGRAY);
+            DrawText(str_p2,
+                W / 2 + 160 - MeasureText(str_p2, pts_fs) / 2,
+                H / 2 - 30, pts_fs,
+                r.vencedor == 2 ? YELLOW : GRAY);
 
-            DrawText(TextFormat("%d", r.pontos_p2),
-                    W / 2 + 140 - MeasureText("0", pts_fs) / 2,
-                    H / 2 - 30, pts_fs,
-                    r.vencedor == 2 ? YELLOW : GRAY);
-
-            // Botões
-            desenhar_botao(btn_revanche, texto_btn_principal, true);
+            /* Botões */
+            desenhar_botao(btn_principal, texto_btn, true);
             if (!r.torneio_final) {
                 desenhar_botao(btn_menu, "Voltar ao Menu", false);
                 DrawText("ENTER = Confirmar     ESC = Menu",
-                        W / 2 - MeasureText("ENTER = Confirmar     ESC = Menu", 18) / 2,
-                        H - 40, 18, DARKGRAY);
+                    W / 2 - MeasureText("ENTER = Confirmar     ESC = Menu", 18) / 2,
+                    H - 40, 18, DARKGRAY);
             } else {
-                DrawText("ENTER = Confirmar", W / 2 - MeasureText("ENTER = Confirmar", 18) / 2, H - 40, 18, DARKGRAY);
+                DrawText("ENTER = Confirmar",
+                    W / 2 - MeasureText("ENTER = Confirmar", 18) / 2,
+                    H - 40, 18, DARKGRAY);
             }
-
         EndDrawing();
-        
-        if (prox_cena != cena_atual) return prox_cena;
-    }
 
+        if (prox != cena_atual) return prox;
+    }
     return CENA_SAIR;
 }
 
-/*                                  
- * ATENÇÃO
- *   - Cada tela deve responder a KEY_ESCAPE pra evitar que o
- *     jogador fique preso.
- *   - GetCharPressed devolve 0 quando não há tecla — sempre
- *     teste num while pra capturar várias teclas no mesmo frame.
- * ============================================================ */
+/* ------------------------------------------------------------------ */
+/*  tela_inserir_nomes                                                  */
+/* ------------------------------------------------------------------ */
+void tela_inserir_nomes(char *nome_p1, char *nome_p2) {
+    const int W = GetScreenWidth();
+    const int H = GetScreenHeight();
+
+    char       *alvos[2]   = { nome_p1, nome_p2 };
+    const char *legendas[2] = {
+        "Jogador 1 — digite seu nome (max 4 letras):",
+        "Jogador 2 — digite seu nome (max 4 letras):"
+    };
+    const char *padroes[2] = { "P1", "P2" };
+
+    for (int fase = 0; fase < 2 && !WindowShouldClose(); fase++) {
+        char *alvo = alvos[fase];
+        alvo[0] = '\0';
+        int  len       = 0;
+        bool confirmado = false;
+
+        while (!WindowShouldClose() && !confirmado) {
+
+            /* --- INPUT --- */
+            int c;
+            while ((c = GetCharPressed()) > 0) {
+                /* Aceita somente letras e dígitos (evita quebrar formato do .txt). */
+                bool letra   = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+                bool digito  = (c >= '0' && c <= '9');
+                if (len < 4 && (letra || digito)) {
+                    alvo[len++] = (char)c;
+                    alvo[len]   = '\0';
+                }
+            }
+            if (IsKeyPressed(KEY_BACKSPACE) && len > 0) {
+                alvo[--len] = '\0';
+            }
+            if (IsKeyPressed(KEY_ENTER)) {
+                if (len == 0)
+                    /* Nome em branco → usa padrão */
+                    strncpy(alvo, padroes[fase], NOME_JOGADOR_TAM);
+                confirmado = true;
+            }
+
+            /* --- DRAW --- */
+            BeginDrawing();
+                ClearBackground((Color){18, 22, 35, 255});
+
+                /* Cabeçalho */
+                const char *tit = "TORNEIO — Insira os nomes";
+                DrawText(tit,
+                    W / 2 - MeasureText(tit, 36) / 2,
+                    H / 2 - 160, 36, GOLD);
+
+                /* Linha decorativa */
+                DrawLine(W / 2 - 250, H / 2 - 110,
+                        W / 2 + 250, H / 2 - 110,
+                        (Color){80, 80, 80, 200});
+
+                /* Legenda do jogador atual */
+                int lg = 26;
+                DrawText(legendas[fase],
+                    W / 2 - MeasureText(legendas[fase], lg) / 2,
+                    H / 2 - 80, lg, RAYWHITE);
+
+                /* Caixa de entrada */
+                Rectangle caixa = {
+                    (float)(W / 2 - 130),
+                    (float)(H / 2 - 10),
+                    260.0f, 62.0f
+                };
+                DrawRectangleRec(caixa, (Color){30, 30, 55, 255});
+                DrawRectangleLinesEx(caixa, 2,
+                    fase == 0 ? SKYBLUE : ORANGE);
+
+                /* Texto digitado */
+                if (len > 0)
+                    DrawText(alvo,
+                        (int)(caixa.x + 16),
+                        (int)(caixa.y + 16),
+                        32,
+                        fase == 0 ? SKYBLUE : ORANGE);
+
+                /* Cursor piscante */
+                if ((int)(GetTime() * 2) % 2 == 0 && len < 4) {
+                    int cx = (int)(caixa.x + 16) +
+                        (len > 0 ? MeasureText(alvo, 32) : 0);
+                    Color cor_cur = fase == 0 ? SKYBLUE : ORANGE;
+                    DrawRectangle(cx + 2, (int)(caixa.y + 10),
+                        3, 42, cor_cur);
+                }
+
+                /* Contador de caracteres */
+                DrawText(TextFormat("%d/4", len),
+                    (int)(caixa.x + caixa.width - 36),
+                    (int)(caixa.y + caixa.height - 22),
+                    16, DARKGRAY);
+
+                /* Instruções */
+                DrawText("ENTER para confirmar",
+                    W / 2 - MeasureText("ENTER para confirmar", 18) / 2,
+                    H / 2 + 68, 18, LIGHTGRAY);
+                DrawText("(deixe em branco para usar o nome padrão)",
+                    W / 2 - MeasureText("(deixe em branco para usar o nome padrão)", 16) / 2,
+                    H / 2 + 94, 16, DARKGRAY);
+
+                /* Indicador de progresso (P1 ✓ ou a fazer) */
+                const char *ind0 = (fase == 0) ? "► P1" : "✓ P1";
+                const char *ind1 = (fase == 1) ? "► P2" : "  P2";
+                Color c0 = (fase == 0) ? SKYBLUE  : GREEN;
+                Color c1 = (fase == 1) ? ORANGE   : DARKGRAY;
+                DrawText(ind0, W / 2 - 80, H / 2 + 130, 22, c0);
+                DrawText(ind1, W / 2 + 20, H / 2 + 130, 22, c1);
+
+            EndDrawing();
+        }
+
+        /* Garante que nome não ficou vazio caso a janela feche */
+        if (!confirmado || alvo[0] == '\0')
+            strncpy(alvo, padroes[fase], NOME_JOGADOR_TAM);
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/*  tela_highscores                                                     */
+/* ------------------------------------------------------------------ */
+Cena tela_highscores(void) {
+    const int W = GetScreenWidth();
+    const int H = GetScreenHeight();
+
+    Rectangle btn_voltar = { W / 2.0f - 180, H - 100, 360, 60 };
+    Cena cena_atual = CENA_HIGHSCORES;
+
+    // Carrega do arquivo texto e joga pra lista encadeada
+    Score *lista = scores_carregar(SCORES_ARQUIVO);
+
+    while (!WindowShouldClose()) {
+        Cena prox = cena_atual;
+
+        if (botao_clicado(btn_voltar) || IsKeyPressed(KEY_ESCAPE)) {
+            prox = CENA_MENU;
+        }
+
+        BeginDrawing();
+            ClearBackground((Color){18, 22, 35, 255});
+
+            DrawText("HIGHSCORES - TORNEIO",
+                W / 2 - MeasureText("HIGHSCORES - TORNEIO", 40) / 2,
+                50, 40, GOLD);
+
+            // Renderiza 2 colunas e 5 linhas
+            int inicio_x_col1 = W / 2 - 400; // Coluna 1
+            int inicio_x_col2 = W / 2 + 50;  // Coluna 2
+            int inicio_y = 150;
+            int espaco_y = 70;
+
+            Score *atual = lista;
+            for (int i = 0; i < 10; i++) {
+                int col_x = (i % 2 == 0) ? inicio_x_col1 : inicio_x_col2;
+                int row_y = inicio_y + (i / 2) * espaco_y;
+
+                if (atual != NULL) {
+                    // Tem pontuação pra mostrar, formata como "Pos: Nome - Pontos"
+                    const char *texto = TextFormat("%d: %s - %02d", i + 1, atual->nome, atual->pontos);
+                    DrawText(texto, col_x, row_y, 30, RAYWHITE);
+                    atual = atual->proximo;
+                } else {
+                    // Posição vazia
+                    const char *texto = TextFormat("%d: ---- - 00", i + 1);
+                    DrawText(texto, col_x, row_y, 30, DARKGRAY);
+                }
+            }
+
+            desenhar_botao(btn_voltar, "Voltar", false);
+        EndDrawing();
+
+        if (prox != cena_atual) {
+            scores_liberar(lista);
+            return prox;
+        }
+    }
+
+    scores_liberar(lista);
+    return CENA_SAIR;
+}
