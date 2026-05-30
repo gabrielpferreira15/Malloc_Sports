@@ -221,6 +221,14 @@ bool colisao_bola_cabeca(Bola *bola, Jogador *j){
         float normal_x = dx / distancia;
         float normal_y = dy / distancia;
 
+        // Afasta a bola para fora da cabeca, evitando overlap em varios frames.
+        float ajuste = (bola->raio + CABECA_RAIO) - distancia + 0.5f;
+        if (ajuste > 0.0f)
+        {
+            bola->x += normal_x * ajuste;
+            bola->y += normal_y * ajuste;
+        }
+
         float forca = 700.0f;
 
         bola->vel_x = normal_x * forca;
@@ -390,6 +398,9 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
     int lado_bola = LADO_NENHUM;  // Lado da bola por posicao (x) para filtrar colisao.
     int lado_toque = LADO_NENHUM; // Ultimo time que tocou (posse) para reset correto.
 
+    bool contato_p1 = false;
+    bool contato_p2 = false;
+
     float tempo_saque = 0.0f;
     int direcao_saque = LADO_P1;
 
@@ -415,6 +426,12 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
         {
             bool ponto_aplicado = false;
             bool bola_parada = (tempo_saque > 0.0f);
+
+            if (bola_parada)
+            {
+                contato_p1 = false;
+                contato_p2 = false;
+            }
 
             // PLAYER 1
             mover_jogador(
@@ -471,6 +488,9 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
 
             if (!bola_parada)
             {
+                bool colidiu_p1 = false;
+                bool colidiu_p2 = false;
+
                 // BOLA
                 aplicar_gravidade_bola(&bola, dt);
 
@@ -482,7 +502,8 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
 
                 if (!ponto_aplicado && lado_bola == LADO_P1)
                 {
-                    if (colisao_bola_cabeca(&bola, &p1))
+                    colidiu_p1 = colisao_bola_cabeca(&bola, &p1);
+                    if (colidiu_p1 && !contato_p1)
                     {
                         // Usa posse para resetar toques no primeiro contato do time.
                         if (!registrar_toque(LADO_P1, &lado_toque, &toques_p1, &toques_p2))
@@ -508,7 +529,8 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
 
                 if (!ponto_aplicado && lado_bola == LADO_P2)
                 {
-                    if (colisao_bola_cabeca(&bola, &p2))
+                    colidiu_p2 = colisao_bola_cabeca(&bola, &p2);
+                    if (colidiu_p2 && !contato_p2)
                     {
                         // Usa posse para resetar toques no primeiro contato do time.
                         if (!registrar_toque(LADO_P2, &lado_toque, &toques_p1, &toques_p2))
@@ -531,6 +553,9 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
                         }
                     }
                 }
+
+                contato_p1 = colidiu_p1;
+                contato_p2 = colidiu_p2;
 
                 // PONTO
                 if (!ponto_aplicado && bola.y + bola.raio >= CHAO_Y)
