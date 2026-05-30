@@ -607,6 +607,14 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
             Vector2 base1 = { seta_x, seta_y - seta_tam / 2.0f };
             Vector2 base2 = { seta_x, seta_y + seta_tam / 2.0f };
 
+            // Mantem a mesma orientacao do triangulo para evitar culling em um dos lados.
+            if (direcao_saque == LADO_P1)
+            {
+                Vector2 tmp = base1;
+                base1 = base2;
+                base2 = tmp;
+            }
+
             DrawTriangle(ponta, base1, base2, BLACK);
         }
 
