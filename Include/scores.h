@@ -1,70 +1,48 @@
-/* ============================================================
- * scores.h — RANKING persistido em arquivo
- * ------------------------------------------------------------
- * Dono: DEV 2 — Matheus Assis
- *
- * IDEIA GERAL
- *   Quando alguém ganha um torneio, ele insere o nome dele
- *   no ranking. Os 10 melhores ficam guardados num arquivo
- *   chamado "scores.dat" — assim, dá para ver os recordes
- *   mesmo depois de fechar e reabrir o jogo.
- *
- *   A estrutura usa LISTA ENCADEADA (em vez de array) por
- *   2 motivos pedagogicos:
- *     1) Cobre o requisito "lista encadeada" da disciplina.
- *     2) Permite inserção ORDENADA elegante (insertion sort
- *        de 1 elemento por vez, sem precisar deslocar array).
- *
- * NOMENCLATURA
- *   - nome    : string com o nome do jogador (máx 15 chars + \0)
- *   - pontos  : pontuação final do torneio
- *   - próximo : ponteiro pro próximo Score da lista
- *
- * O QUE ESTE ARQUIVO PRECISA TER (passo a passo)
- *
- *   PASSO 1: Header guard
- *     #ifndef SCORES_H
- *     #define SCORES_H
- *
- *   PASSO 2: Defina a struct Score
- *
- *     typedef struct Score {
- *         char nome[16];          // 15 chars + terminador nulo
- *         int  pontos;            // pontuação
- *         struct Score *próximo;  // próximo nó da lista
- *     } Score;
- *
- *     POR QUE 16? Para caber nomes curtos tipo "GABRIEL_M\0" e
- *     ainda sobrar espaço. É um número "redondo" pra alinhar
- *     na memória.
- *
- *   PASSO 3: Declare os protótipos
- *
- *     Score *scores_carregar(const char *arquivo);
- *         // lê o arquivo binário e devolve a cabeça da lista
- *         // se o arquivo não existe (1a vez), devolve NULL
- *
- *     void scores_salvar(const char *arquivo, Score *cabeça);
- *         // grava a lista no arquivo binário
- *
- *     Score *scores_inserir(Score *cabeça,
- *                           const char *nome, int pontos);
- *         // insere ORDENADO por pontos (maior primeiro)
- *         // mantém só os 10 melhores (corta o resto)
- *
- *     void scores_liberar(Score *cabeça);
- *         // free em todos os nós
- *
- *   PASSO 4: #endif
- *
- * REQUISITOS DA DISCIPLINA QUE ESTE ARQUIVO COBRE
- *   - Arquivo E/S (fwrite/fread)
- *   - Lista encadeada
- *   - malloc/free
- *
- * ATENÇÃO
- *   - const char *arquivo é assinatura padrão em C pra
- *     "string que não vai ser modificada". Pode passar literais.
- * ============================================================ */
+#ifndef SCORES_H
+#define SCORES_H
 
-/* TODO: header guard, struct Score, protótipos, #endif */
+/* ================================================================
+ * scores.h — Lista encadeada de highscores para o modo Torneio
+ * ----------------------------------------------------------------
+ * Formato do arquivo .txt (uma linha por entrada):
+ *   NOME - PONTUACAO
+ *   Ex: ALEX - 576000
+ *
+ * Regras de inserção:
+ *   - Ordem decrescente de pontuação.
+ *   - Empate: o jogador mais antigo permanece à frente
+ *     (novo com mesmo score vai DEPOIS do existente).
+ *   - Mantém no máximo SCORES_MAX entradas.
+ * ================================================================ */
+
+#define SCORES_ARQUIVO  "highscores.txt"
+#define SCORES_MAX      10
+#define NOME_TAM         5   /* 4 chars + terminador nulo '\0' */
+
+typedef struct Score {
+    char          nome[NOME_TAM];
+    int           pontos;
+    struct Score *proximo;
+} Score;
+
+/* Carrega a lista do arquivo .txt.
+ * Devolve NULL se o arquivo não existir (primeira execução). */
+Score *scores_carregar(const char *arquivo);
+
+/* Grava a lista no arquivo, sobrescrevendo o conteúdo anterior.
+ * Formato de cada linha: "NOME - PONTOS\n" */
+void scores_salvar(const char *arquivo, Score *cabeca);
+
+/* Insere um novo score em ordem decrescente.
+ * Empate → novo entra DEPOIS dos existentes de mesmo valor.
+ * Aplica SCORES_MAX: entradas excedentes são liberadas.
+ * Devolve a nova cabeça da lista. */
+Score *scores_inserir(Score *cabeca, const char *nome, int pontos);
+
+/* Libera todos os nós da lista. */
+void scores_liberar(Score *cabeca);
+
+/* Conta quantos nós há na lista. */
+int scores_tamanho(Score *cabeca);
+
+#endif
