@@ -462,10 +462,20 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
     float tempo_anim_p2 = 0.0f;
 
     const float velocidade_anim = 0.12f;
+
+    float tempo_colisao_p1 = 0.0f;
+    float tempo_colisao_p2 = 0.0f;
+
+    const float DURACAO_COLISAO = 0.10f;
         
     while (!WindowShouldClose() && vencedor == 0)
     {
         float dt = GetFrameTime();
+        if (tempo_colisao_p1 > 0)
+            tempo_colisao_p1 -= dt;
+
+        if (tempo_colisao_p2 > 0)
+            tempo_colisao_p2 -= dt;
         tempo_fundo += dt;
 
         if (tempo_fundo >= velocidade_fundo)
@@ -551,8 +561,11 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
             );
 
             // ANIMAÇÃO P1
-
-            if (!p1.no_chao)
+            if (tempo_colisao_p1 > 0)
+            {
+                frame_p1 = 10;
+            }
+            else if (!p1.no_chao)
             {
                 frame_p1 = 10;
             }
@@ -611,7 +624,11 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
                     
             // ANIMAÇÃO P2
 
-            if (!p2.no_chao)
+            if (tempo_colisao_p2 > 0)
+            {
+                frame_p2 = 10;
+            }
+            else if (!p2.no_chao)
             {
                 frame_p2 = 10;
             }
@@ -707,6 +724,7 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
                     colidiu_p1 = colisao_bola_cabeca(&bola, &p1);
                     if (colidiu_p1 && !contato_p1)
                     {
+                        tempo_colisao_p1 = DURACAO_COLISAO;
                         // Usa posse para resetar toques no primeiro contato do time.
                         if (!registrar_toque(LADO_P1, &lado_toque, &toques_p1, &toques_p2))
                         {
@@ -734,6 +752,7 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
                     colidiu_p2 = colisao_bola_cabeca(&bola, &p2);
                     if (colidiu_p2 && !contato_p2)
                     {
+                        tempo_colisao_p2 = DURACAO_COLISAO;
                         // Usa posse para resetar toques no primeiro contato do time.
                         if (!registrar_toque(LADO_P2, &lado_toque, &toques_p1, &toques_p2))
                         {
@@ -912,9 +931,9 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
         DrawTexturePro(
             p2_anim[frame_p2],
             (Rectangle){
-                0,
-                0,
                 p2_anim[frame_p2].width,
+                0,
+                -p2_anim[frame_p2].width,
                 p2_anim[frame_p2].height
             },
             (Rectangle){
