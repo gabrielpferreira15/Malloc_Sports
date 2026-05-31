@@ -37,7 +37,7 @@
 /* ------------------------------------------------------------------ */
 #define VEL_BASE           1.0f   /* px/s sem nenhum combo           */
 #define FATOR_COMBO          8.0f   /* px/s adicionais por combo       */
-#define PENALIDADE_COLISAO  80.0f   /* queda de velocidade ao colidir  */
+#define PENALIDADE_COLISAO  320.0f   /* queda de velocidade ao colidir  */
 
 #define GRAVIDADE          1800.0f  /* px/s² — aceleração de queda     */
 #define FORCA_PULO        -620.0f   /* vel_y inicial do pulo (negativa = sobe) */
@@ -127,7 +127,7 @@ static void init_corredor(Corredor *c, int tecla_esq, int tecla_dir, int tecla_p
 /* Recalcula a velocidade com base no combo atual. */
 static void atualizar_velocidade(Corredor *c) {
     c->vel = clampf(VEL_BASE + c->combo * FATOR_COMBO,
-                    VEL_BASE, VEL_BASE + 40 * FATOR_COMBO);
+                    VEL_BASE, VEL_BASE + 70 * FATOR_COMBO);
 }
 
 /* ------------------------------------------------------------------ */
