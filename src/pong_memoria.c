@@ -77,6 +77,8 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
     Texture2D raquete_p1 = LoadTexture("assets/sprites/raquete1.png");
     Texture2D raquete_p2 = LoadTexture("assets/sprites/raquete2.png");
 
+    Texture2D bola_boost = LoadTexture("assets/sprites/bola_boost.png");
+
     Texture2D texturas_bola[NUM_FRAMES];
     bool texturas_validas = true;
 
@@ -151,6 +153,11 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
     const float ACELERACAO_REBATE_RAQUETE = 15.0f;
 
     const int LIMITE_REBATES = 20;
+
+    bool mostrar_anim_boost = false;
+    float tempo_anim_boost = 0.0f;
+
+    const float DURACAO_ANIM_BOOST = 0.4f;
 
     while (!WindowShouldClose() && vencedor == 0) {
 
@@ -397,6 +404,14 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
                 contador_rebates = 0;
                 velocidade_raquete = VEL_RAQUETE;
 
+                frame_atual = 0;
+                tempo_animacao = 0.0f;
+
+                mostrando_impacto = false;
+
+                mostrar_anim_boost = false;
+                tempo_anim_boost = 0.0f;
+
                 resetar_bola(&bola, &direcao_saque, &tempo_saque);
 
                 // Em ponto de ouro, o primeiro a marcar vence imediatamente.
@@ -433,6 +448,14 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
                 contador_rebates = 0;
                 velocidade_raquete = VEL_RAQUETE;
 
+                frame_atual = 0;
+                tempo_animacao = 0.0f;
+
+                mostrando_impacto = false;
+
+                mostrar_anim_boost = false;
+                tempo_anim_boost = 0.0f;
+                
                 resetar_bola(&bola, &direcao_saque, &tempo_saque);
 
                 // Em ponto de ouro, o primeiro a marcar vence imediatamente.
@@ -472,6 +495,8 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
                 (float)(bola.raio + 14);
 
             if (dx * dx + dy * dy <= rs * rs) {
+                mostrar_anim_boost = true;
+                tempo_anim_boost = DURACAO_ANIM_BOOST;
 
                 if (!boost_ativo) {
 
@@ -609,7 +634,12 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
             // 3. DESENHAR O FRAME DA LISTA
             // ==========================================
             if (texturas_validas) {
-                Texture2D tex_atual = texturas_bola[frame_atual];
+                Texture2D tex_atual;
+
+                if (mostrar_anim_boost)
+                    tex_atual = bola_boost;
+                else
+                    tex_atual = texturas_bola[frame_atual];
 
                 float largura_tex = (float)tex_atual.width;
                 float altura_tex = (float)tex_atual.height;
@@ -781,6 +811,7 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
         }
     }
     UnloadTexture(fundo);
+    UnloadTexture(bola_boost);
 
     UnloadTexture(raquete_p1);
     UnloadTexture(raquete_p2);
