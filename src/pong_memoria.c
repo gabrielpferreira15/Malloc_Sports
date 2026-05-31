@@ -149,10 +149,10 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
 
     float velocidade_raquete = VEL_RAQUETE;
 
-    const float ACELERACAO_REBATE_BOLA = 50.0f;
-    const float ACELERACAO_REBATE_RAQUETE = 15.0f;
+    const float ACELERACAO_REBATE_BOLA = 100.0f;
+    const float ACELERACAO_REBATE_RAQUETE = 50.0f;
 
-    const int LIMITE_REBATES = 20;
+    const int LIMITE_REBATES = 10;
 
     bool mostrar_anim_boost = false;
     float tempo_anim_boost = 0.0f;
@@ -706,7 +706,7 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
                 );
 
                 DrawText(
-                    "free()",
+                    "boost()",
                     (int)powerup_x - 22,
                     (int)powerup_y - 8,
                     14,
@@ -719,7 +719,7 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
                 LARGURA / 2 - 70,
                 52,
                 36,
-                WHITE
+                YELLOW
             );
 
             DrawText(
@@ -727,7 +727,7 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
                 LARGURA / 2 + 40,
                 52,
                 36,
-                WHITE
+                YELLOW
             );
 
             // Timer central (ou "Ponto de ouro!" quando necessário).

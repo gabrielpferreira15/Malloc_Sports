@@ -16,8 +16,8 @@
 #define VELOCIDADE_JOGADOR 420.0f
 #define FORCA_PULO 650.0f
 
-#define JOGADOR_W 64
-#define JOGADOR_H 64
+#define JOGADOR_W 128
+#define JOGADOR_H 128
 
 #define CABECA_RAIO 25
 

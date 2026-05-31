@@ -26,7 +26,7 @@
 #define CORREDOR_H           40
 
 /* Obstáculo: tamanho visual */
-#define OBST_W               30
+#define OBST_W               15
 #define OBST_H               40
 
 /* Linha de chegada: margem do fim da pista */
@@ -150,12 +150,18 @@ static void desenhar_pista(int pista_y, Color cor_pista) {
         8, 8, (i / 8 % 2 == 0) ? WHITE : BLACK);
 }
 
-static void desenhar_obstaculos(const Obstaculo *obs, int qtd, int pista_y, Color cor) {
+static void desenhar_obstaculos(const Obstaculo *obs, int qtd, int pista_y) {
     for (int i = 0; i < qtd; i++) {
         float tx = pista_para_tela_x(obs[i].x);
-        float ty = (float)(pista_y) - (float)(OBST_H);
-        DrawRectangle((int)(tx - OBST_W / 2), (int)ty,
-            OBST_W, OBST_H, cor);
+        float ty = (float)pista_y - (float)OBST_H;
+
+        DrawRectangle(
+            (int)(tx - OBST_W / 2),
+            (int)ty,
+            OBST_W,
+            OBST_H,
+            WHITE
+        );
     }
 }
 
@@ -470,9 +476,9 @@ int jogar_corrida_ponteiros(int *pontos_p1, int *pontos_p2) {
 
             /* Obstáculos */
             desenhar_obstaculos(obstaculos, cfg->quantidade,
-                PISTA_Y_P1, RED);
+                PISTA_Y_P1);
             desenhar_obstaculos(obstaculos, cfg->quantidade,
-                PISTA_Y_P2, RED);
+                PISTA_Y_P2);
 
             /* Corredores */
             float p1_x = pista_para_tela_x(p1.x);
