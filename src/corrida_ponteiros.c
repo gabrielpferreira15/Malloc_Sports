@@ -43,6 +43,9 @@
 #define FORCA_PULO        -620.0f   /* vel_y inicial do pulo (negativa = sobe) */
 #define CHAO_Y               0.0f   /* y=0 significa "no chão" (relativo à pista) */
 
+#define NUM_FRAMES_CORREDOR 7
+#define NUM_FRAMES_FUNDO 3
+
 /* ------------------------------------------------------------------ */
 /*  Structs                                                            */
 /* ------------------------------------------------------------------ */
@@ -150,13 +153,6 @@ static void desenhar_pista(int pista_y, Color cor_pista) {
         8, 8, (i / 8 % 2 == 0) ? WHITE : BLACK);
 }
 
-static void desenhar_corredor(const Corredor *c, int pista_y, Color cor) {
-    float tx = pista_para_tela_x(c->x);
-    float ty = (float)(pista_y) - (float)(CORREDOR_H) - c->y_pulo;
-    DrawRectangle((int)(tx - CORREDOR_W / 2), (int)ty,
-        CORREDOR_W, CORREDOR_H, cor);
-}
-
 static void desenhar_obstaculos(const Obstaculo *obs, int qtd, int pista_y, Color cor) {
     for (int i = 0; i < qtd; i++) {
         float tx = pista_para_tela_x(obs[i].x);
@@ -208,6 +204,36 @@ static void contagem_regressiva(void) {
 /* ------------------------------------------------------------------ */
 int jogar_corrida_ponteiros(int *pontos_p1, int *pontos_p2) {
 
+    Texture2D fundo_p1[NUM_FRAMES_FUNDO];
+
+    for (int i = 0; i < NUM_FRAMES_FUNDO; i++) {
+
+        fundo_p1[i] = LoadTexture(
+            TextFormat("assets/sprites/p1fundo_pista%d.png", i)
+        );
+    }
+
+    Texture2D fundo_p2[NUM_FRAMES_FUNDO];
+
+    for (int i = 0; i < NUM_FRAMES_FUNDO; i++) {
+
+        fundo_p2[i] = LoadTexture(
+            TextFormat("assets/sprites/p2fundo_pista%d.png", i)
+        );
+    }
+    Texture2D p1_frames[NUM_FRAMES_CORREDOR];
+    Texture2D p2_frames[NUM_FRAMES_CORREDOR];
+
+    for (int i = 0; i < NUM_FRAMES_CORREDOR; i++) {
+        p1_frames[i] = LoadTexture(
+            TextFormat("assets/sprites/p1_corredor%d.png", i)
+        );
+
+        p2_frames[i] = LoadTexture(
+            TextFormat("assets/sprites/p2_corredor%d.png", i)
+        );
+    }
+
     /* -------- Sorteia configuração de obstáculos -------- */
     int cfg_idx = GetRandomValue(0, 2);
     const ConfigObstaculos *cfg = &CONFIGS[cfg_idx];
@@ -222,6 +248,20 @@ int jogar_corrida_ponteiros(int *pontos_p1, int *pontos_p2) {
     init_corredor(&p1, KEY_A, KEY_D, KEY_W);
     init_corredor(&p2, KEY_LEFT, KEY_RIGHT, KEY_UP);
 
+    int frame_p1 = 0;
+    int frame_p2 = 0;
+
+    float tempo_anim_p1 = 0.0f;
+    float tempo_anim_p2 = 0.0f;
+
+    const float velocidade_animacao = 0.1f;
+
+    int frame_fundo = 0;
+
+    float tempo_fundo = 0.0f;
+
+    const float velocidade_fundo = 0.15f;
+
     /* -------- Contagem regressiva -------- */
     contagem_regressiva();
     if (WindowShouldClose()) { *pontos_p1 = 0; *pontos_p2 = 0; return 1; }
@@ -232,6 +272,70 @@ int jogar_corrida_ponteiros(int *pontos_p1, int *pontos_p2) {
     while (!WindowShouldClose() && !p1.terminou && !p2.terminou) {
 
         float dt = GetFrameTime();
+
+        tempo_fundo += dt;
+
+        if (tempo_fundo >= velocidade_fundo) {
+
+            tempo_fundo = 0.0f;
+
+            frame_fundo++;
+
+            if (frame_fundo >= NUM_FRAMES_FUNDO)
+                frame_fundo = 0;
+        }
+
+        // ANIMAÇÃO P1
+
+        if (!p1.no_chao) {
+
+            // frame de pulo
+            frame_p1 = 6;
+
+        } else if (p1.combo == 0) {
+
+            // parado
+            frame_p1 = 0;
+
+        } else {
+
+            tempo_anim_p1 += dt;
+
+            if (tempo_anim_p1 >= velocidade_animacao) {
+
+                tempo_anim_p1 = 0.0f;
+
+                frame_p1++;
+
+                if (frame_p1 < 1 || frame_p1 > 5)
+                    frame_p1 = 1;
+            }
+        }
+
+        // ANIMAÇÃO P2
+
+        if (!p2.no_chao) {
+
+            frame_p2 = 6;
+
+        } else if (p2.combo == 0) {
+
+            frame_p2 = 0;
+
+        } else {
+
+            tempo_anim_p2 += dt;
+
+            if (tempo_anim_p2 >= velocidade_animacao) {
+
+                tempo_anim_p2 = 0.0f;
+
+                frame_p2++;
+
+                if (frame_p2 < 1 || frame_p2 > 5)
+                    frame_p2 = 1;
+            }
+        }
 
         /* ---- INPUT + MOVIMENTO: helper macro para cada jogador ---- */
 
@@ -326,6 +430,43 @@ int jogar_corrida_ponteiros(int *pontos_p1, int *pontos_p2) {
         BeginDrawing();
             ClearBackground((Color){18, 22, 35, 255});
 
+            DrawTexturePro(
+                fundo_p1[frame_fundo],
+                (Rectangle){
+                    0,
+                    0,
+                    fundo_p1[frame_fundo].width,
+                    fundo_p1[frame_fundo].height
+                },
+                (Rectangle){
+                    HUD_LARGURA,
+                    PISTA_Y_P1 - PISTA_ALTURA/2,
+                    LARGURA - HUD_LARGURA,
+                    PISTA_ALTURA
+                },
+                (Vector2){0,0},
+                0.0f,
+                WHITE
+            );
+
+            DrawTexturePro(
+                fundo_p2[frame_fundo],
+                (Rectangle){
+                    0,
+                    0,
+                    fundo_p2[frame_fundo].width,
+                    fundo_p2[frame_fundo].height
+                },
+                (Rectangle){
+                    HUD_LARGURA,
+                    PISTA_Y_P2 - PISTA_ALTURA/2,
+                    LARGURA - HUD_LARGURA,
+                    PISTA_ALTURA
+                },
+                (Vector2){0,0},
+                0.0f,
+                WHITE
+            );
             /* Pistas */
             desenhar_pista(PISTA_Y_P1, (Color){30, 30, 50, 255});
             desenhar_pista(PISTA_Y_P2, (Color){30, 30, 50, 255});
@@ -337,9 +478,49 @@ int jogar_corrida_ponteiros(int *pontos_p1, int *pontos_p2) {
                 PISTA_Y_P2, RED);
 
             /* Corredores */
-            desenhar_corredor(&p1, PISTA_Y_P1, SKYBLUE);
-            desenhar_corredor(&p2, PISTA_Y_P2, ORANGE);
+            float p1_x = pista_para_tela_x(p1.x);
+            float p1_y = PISTA_Y_P1 - CORREDOR_H - p1.y_pulo;
 
+            DrawTexturePro(
+                p1_frames[frame_p1],
+                (Rectangle){
+                    0,
+                    0,
+                    p1_frames[frame_p1].width,
+                    p1_frames[frame_p1].height
+                },
+                (Rectangle){
+                    p1_x - CORREDOR_W/2,
+                    p1_y,
+                    CORREDOR_W * 2,
+                    CORREDOR_H * 2
+                },
+                (Vector2){0,0},
+                0.0f,
+                WHITE
+            );
+
+            float p2_x = pista_para_tela_x(p2.x);
+            float p2_y = PISTA_Y_P2 - CORREDOR_H - p2.y_pulo;
+
+            DrawTexturePro(
+                p2_frames[frame_p2],
+                (Rectangle){
+                    0,
+                    0,
+                    p2_frames[frame_p2].width,
+                    p2_frames[frame_p2].height
+                },
+                (Rectangle){
+                    p2_x - CORREDOR_W/2,
+                    p2_y,
+                    CORREDOR_W * 2,
+                    CORREDOR_H * 2
+                },
+                (Vector2){0,0},
+                0.0f,
+                WHITE
+            );
             /* HUD lateral */
             desenhar_hud_lateral(&p1, &p2);
 
@@ -368,5 +549,15 @@ int jogar_corrida_ponteiros(int *pontos_p1, int *pontos_p2) {
 
     *pontos_p1 = (vencedor == 1) ? 1 : 0;
     *pontos_p2 = (vencedor == 2) ? 1 : 0;
+    for (int i = 0; i < NUM_FRAMES_CORREDOR; i++) {
+        UnloadTexture(p1_frames[i]);
+        UnloadTexture(p2_frames[i]);
+    }
+    for (int i = 0; i < NUM_FRAMES_FUNDO; i++) {
+
+        UnloadTexture(fundo_p1[i]);
+        UnloadTexture(fundo_p2[i]);
+    }
+    
     return vencedor;
 }
