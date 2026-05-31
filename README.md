@@ -1,223 +1,220 @@
-# Malloc Sports
+# 🏆 Malloc Sports
 
-> "If it compiles, it ships."
-
-Projeto da disciplina **Programação Imperativa e Funcional (PIF) — 2026.1 — CESAR School**.
-
-Coletânea de minigames competitivos de 2 jogadores no mesmo teclado, em **C + Raylib**, com temática do universo do C (malloc, free, segfault, ponteiros).
-
-## Equipe
-
-- Gabriel Peixoto e Silva Ferreira — Núcleo do motor + Corrida de Ponteiros
-- Matheus Assis de Souza Jacome — Sistemas de Jogo + Pong da Memória
-- Gabriel Mendes Cavalcanti — Interface + Estouro de Pilha
+**Malloc Sports** é um título composto por múltiplos minigames de competição esportiva, desenvolvido com foco na experiência multiplayer local e inspirado no clássico "Wii Sports". 
 
 ---
 
-## Instalação no WINDOWS (PowerShell, sem WSL)
+## 🔧 **Ferramentas Utilizadas**
 
-A ideia é ter 2 coisas no PC:
-1. **mingw-w64** — compilador `gcc` e `mingw32-make` para Windows.
-2. **Raylib 5.x** — biblioteca gráfica.
+<details>
+<summary><strong> Ver ferramentas </strong></summary>
 
-A forma mais simples é usar o pacote oficial da Raylib para Windows, que **já vem com o mingw-w64 incluso**.
+**Linguagem:**
 
-### Passo 1: baixar a Raylib (com mingw incluso)
+* C 
 
-Abra o **PowerShell** (NÃO precisa ser admin) e rode:
+**Biblioteca Gráfica:**
 
-```powershell
-# 1. Baixa o zip da Raylib (com mingw-w64) na pasta de Downloads
-$url = "https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_win64_mingw-w64.zip"
-$zip = "$env:USERPROFILE\Downloads\raylib.zip"
-Invoke-WebRequest -Uri $url -OutFile $zip
+* Raylib
 
-# 2. Cria a pasta C:\raylib e extrai o conteúdo nela
-New-Item -ItemType Directory -Force -Path "C:\raylib" | Out-Null
-Expand-Archive -Path $zip -DestinationPath "C:\raylib" -Force
+**IDE:**
 
-# 3. Renomeia a pasta interna para "raylib" (o Makefile espera C:\raylib\raylib)
-Rename-Item "C:\raylib\raylib-5.5_win64_mingw-w64" "raylib"
+* VS Code
+
+**Ambiente:**
+
+* Linux (WSL)
+* macOS
+
+**Controle de Versão:**
+
+* GitHub
+
+</details>
+
+
+
+## 👥 Equipe
+
+<details>
+<summary><strong> Ver Equipe </strong></summary>
+
+- **Gabriel Peixoto e Silva Ferreira**
+- **Matheus Assis de Souza Jácome**
+- **Gabriel Mendes Cavalcanti**
+
+</details>
+
+## 🎮 Sobre o Jogo
+
+<details>
+<summary><strong> Ver Detalhes do Jogo  </strong></summary>
+
+### Modos de jogo:
+- **Modo Torneio:** Os jogadores participam de todos os 3 esportes em sequência onde o desempenho em cada minigame rende pontos acumulativos. Ao final, o grande campeão é coroado e as pontuações dos jogadores podem entrar para a lista de *Highscores* caso consigam ficar entre as 10 melhores!
+
+- **Minigame Único:** Os jogadores escolhem apenas um dos jogos para um desafio rápido e direto, com suporte a revanches imediatas.
+
+### Minigames e Controles
+
+O teclado é dividido para que dois jogadores compitam simultaneamente no mesmo computador.
+
+#### 1. Corrida com obstáculos
+Uma disputa de velocidade e tempo de reação para saltar obstáculos e ser o primeiro a chegar ao final.
+- **Jogador 1:** `A` e `D` alternados (Correr), `W` (Pular)
+- **Jogador 2:** `<` e `>` alternados (Correr), `^` Seta Cima (Pular)
+
+#### 2. Ping-Pong
+O clássico refeito! Conta com mecânicas de aceleração da bola, "boosts" e limite de duração de 60 segundos. 
+- **Jogador 1:** `W` / `S` (Mover raquete)
+- **Jogador 2:** `Seta Cima` / `Seta Baixo` (Mover raquete)
+
+#### 3. Vôlei de Praia
+Uma partida intensa de 60 segundos aplicando física de gravidade, pulo e mecânicas de toque na bola.
+- **Jogador 1 & 2:** Movimentação clássica direcional e botões de pulo aplicados às mecânicas de colisão 2D com a bola e a rede.
+
+### Funcionalidades e Estrutura Técnica
+
+O código do projeto reflete um design modular e a aplicação prática de conceitos de programação estruturada:
+
+- **Arquitetura de Cenas:** Um gerenciador central no `main.c` utiliza uma *State Machine* (Máquina de Estados) definida em `cenas.h` para transitar suavemente entre Menus, Seleção de Modos, Minigames e Telas de Resultado.
+
+- **Sistema de Torneio (`tournament.h/c`):** Uma estrutura robusta que gerencia a fila de minigames, mantém o estado dos placares, acumula as pontuações em background e declara o vencedor final.
+
+- **Persistência e Listas Encadeadas (`scores.h/c`):** O sistema de *Highscores* utiliza **Listas Encadeadas** dinâmicas para ordenar as pontuações do torneio. O TOP 10 é salvo de forma persistente no arquivo `highscores.txt`.
+
+- **Física Simples e Colisão:** Implementação de gravidade, detecção de colisão AABB (Axis-Aligned Bounding Box) e vetores de velocidade.
+
+</details>
+
+## 🛠️ Guia de Compilação e Execução 
+
+<details>
+<summary><strong> Ver Guia </strong></summary>
+
+Este documento explica como configurar o ambiente, compilar e executar o **Malloc Sports** em diferentes sistemas operacionais (**Windows, Linux e macOS**), utilizando o `Makefile` incluso no projeto.
+
+### Estrutura de Pastas Esperada
+
+Para que a compilação funcione corretamente, certifique-se de que a estrutura do seu projeto esteja organizada da seguinte forma:
+```text
+📂 Malloc Sports/
+├── 📂 Include/          # Todos os arquivos de cabeçalho (.h)
+├── 📂 src/              # Todos os arquivos de código-fonte (.c)
+├── 📄 Makefile          # Arquivo de automação da compilação
+└── 📄 highscores.txt    # Arquivo de persistência (gerado automaticamente)
 ```
 
-> **Se a versão 5.5 não existir mais**, vá em https://github.com/raysan5/raylib/releases, copie o link do `raylib-X.X_win64_mingw-w64.zip` mais recente e troque a `$url` acima.
+---
 
-### Passo 2: adicionar o mingw-w64 ao PATH
+### 1. Compilação no Windows (Via PowerShell)
 
-Também no PowerShell:
+O ambiente recomendado para Windows é o **MSYS2 (UCRT64)** combinado com a biblioteca **Raylib**.
 
+#### Passo 1.1: Instalar Dependências (MSYS2 e Raylib)
+1. Baixe e instale o [MSYS2](https://www.msys2.org/).
+2. Abra o terminal **MSYS2 UCRT64** e instale o compilador `gcc`, a ferramenta `make` e a biblioteca `raylib` rodando o comando:
+   ```bash
+   pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-make mingw-w64-ucrt-x86_64-raylib
+   ```
+
+#### Passo 1.2: Compilar o Jogo
+1. Abra o **PowerShell** ou **Prompt de Comando (CMD)**.
+2. Navegue até a pasta raiz do projeto:
+   ```powershell
+   cd "caminho\para\o\seu\projeto"
+   ```
+3. Execute o comando do Make para Windows:
+   ```powershell
+   mingw32-make
+   ```
+
+#### Passo 1.3: Executar
+Após o término, um arquivo executável será gerado. Para jogar, basta rodar:
 ```powershell
-# Adiciona PERMANENTEMENTE C:\raylib\raylib\mingw\bin ao PATH do usuário
-$mingw = "C:\raylib\raylib\mingw\bin"
-$path  = [Environment]::GetEnvironmentVariable("PATH", "User")
-if ($path -notlike "*$mingw*") {
-    [Environment]::SetEnvironmentVariable("PATH", "$path;$mingw", "User")
-}
-# Atualiza o PATH da sessão atual também
-$env:PATH += ";$mingw"
-```
-
-**Feche e reabra o PowerShell** depois disso. Para testar:
-
-```powershell
-gcc --version
-mingw32-make --version
-```
-
-Se aparecer a versão em ambos, deu certo.
-
-### Passo 3: compilar e rodar
-
-Navegue até a pasta do projeto e rode:
-
-```powershell
-cd "D:\Malloc Sports"
-mingw32-make
 .\malloc_sports.exe
 ```
 
-Para limpar os arquivos compilados:
-
-```powershell
-mingw32-make clean
-```
-
-> **Por que `mingw32-make` e não `make`?** Porque o `make` puro não vem no Windows. O mingw-w64 instala o comando como `mingw32-make`. Se você preferir digitar só `make`, pode criar um alias no perfil do PowerShell:
->
-> ```powershell
-> Add-Content $PROFILE "`nSet-Alias make mingw32-make"
-> ```
-
 ---
 
-## Instalação no LINUX
+### 2. Compilação no Linux (Ubuntu, Debian, Fedora, etc.)
 
+No Linux, usamos o gerenciador de pacotes nativo para instalar o compilador e a Raylib.
+
+#### Passo 2.1: Instalar Dependências
+Abra o terminal e instale as ferramentas essenciais e a Raylib. 
+
+**No Ubuntu/Debian:**
 ```bash
 sudo apt update
 sudo apt install build-essential libraylib-dev pkg-config
 ```
 
-Depois:
-
+**No Fedora:**
 ```bash
-cd "Malloc Sports"
-make
-./malloc_sports
+sudo dnf install @development-tools raylib-devel pkg-config
 ```
 
-## Instalação no macOS
+#### Passo 2.2: Compilar o Jogo
+1. Navegue até a pasta do projeto:
+   ```bash
+   cd caminho/para/o/seu/projeto
+   ```
+2. Compile o código rodando apenas:
+   ```bash
+   make
+   ```
 
+#### Passo 2.3: Executar
+Rode o binário gerado:
 ```bash
-brew install raylib pkg-config
-```
-
-Depois:
-
-```bash
-cd "Malloc Sports"
-make
 ./malloc_sports
 ```
 
 ---
 
-## Alternativa: WSL no Windows (caso o caminho nativo dê problema)
+### 3. Compilação no macOS
 
-Se a instalação nativa não funcionar, dá para usar o **WSL** (Subsistema Linux para Windows) e seguir as instruções do Linux:
+No Mac, usamos o gerenciador de pacotes **Homebrew** para obter as ferramentas necessárias.
 
-```powershell
-# No PowerShell como ADMIN
-wsl --install -d Ubuntu
-```
+#### Passo 3.1: Instalar Dependências
+1. Certifique-se de ter as ferramentas de linha de comando do Xcode instaladas (`xcode-select --install`).
 
-Reinicie o PC. Quando o Ubuntu abrir pela primeira vez, crie usuário e senha. Depois, dentro do Ubuntu:
+2. Instale a Raylib e o `pkg-config` via [Homebrew](https://brew.sh/):
+   ```bash
+   brew install raylib pkg-config
+   ```
 
+#### Passo 3.2: Compilar o Jogo
+1. Navegue até a pasta do projeto pelo Terminal:
+   ```bash
+   cd caminho/para/o/seu/projeto
+   ```
+2. Compile o código:
+   ```bash
+   make
+   ```
+
+#### Passo 3.3: Executar
+Rode o binário gerado:
 ```bash
-sudo apt update
-sudo apt install build-essential libraylib-dev pkg-config
-
-# Acessar a pasta do projeto que está em D:\Malloc Sports
-cd /mnt/d/Malloc\ Sports
-make
 ./malloc_sports
 ```
 
-> **Atenção no WSL:** abrir janelas gráficas funciona automaticamente no Windows 11 (WSLg). No Windows 10, é preciso instalar um servidor X (ex.: VcXsrv) — recomendado usar Windows 11 ou seguir o caminho nativo.
-
 ---
 
-## Controles (teclado dividido)
+### Limpando Arquivos Temporários (Todos os Sistemas)
 
-| Ação             | Jogador 1     | Jogador 2          |
-|------------------|---------------|--------------------|
-| Mover esq/dir    | A / D         | SETA ESQ / DIR     |
-| Mover cima/baixo | W / S         | SETA CIMA / BAIXO  |
-| Ação principal   | W / ESPAÇO    | SETA CIMA / ENTER  |
-| Pausar           | ESC           | ESC                |
-| Confirmar (UI)   | ENTER         | ENTER              |
+Se você modificar a estrutura do código ou quiser recompilar o projeto do zero, é recomendável limpar os arquivos de objetos (`.o`) antigos criados durante a compilação anterior.
 
-## Modos de jogo
+- **No Windows (PowerShell/CMD):**
+  ```powershell
+  mingw32-make clean
+  ```
 
-- **Torneio:** os 2 jogadores disputam os 3 minigames em sequência. Maior pontuação no fim vence.
-- **Minigame Único:** escolha livre de qualquer minigame para uma partida avulsa.
+- **No Linux / macOS (Terminal):**
+  ```bash
+  make clean
+  ```
 
-## Minigames
-
-1. **Corrida de Ponteiros** — corrida lateral com obstáculos. Pula com W / SETA CIMA.
-2. **Pong da Memória** — pong clássico. Quem perde a bola sofre "vazamento de memória" visual.
-3. **Estouro de Pilha** — Tetris competitivo. Limpar linhas envia lixo para o adversário.
-
-## Estrutura do projeto
-
-```
-Malloc Sports/
-├── src/             arquivos .c e .h (1 módulo por arquivo)
-├── assets/          sprites e sons
-├── Makefile         compilação (Windows + Linux)
-├── README.md        este arquivo
-├── .gitignore
-└── scores.dat       gerado em runtime (ranking)
-```
-
-## Como cada arquivo deve ser preenchido
-
-Cada `.c`/`.h` já tem um cabeçalho de comentários com a IDEIA, os PASSOS e os REQUISITOS DA DISCIPLINA que ele cobre.
-
-**Cada dev escreve o código do módulo dele**, lendo os comentários como roteiro. Os comentários NÃO são código pronto — eles guiam o raciocínio.
-
-## Requisitos da disciplina cobertos
-
-- Código em C puro (apenas .c e .h)
-- Raylib como biblioteca gráfica
-- Structs (Jogador, Bola, Bloco, Obstáculo, Score, EstadoTorneio)
-- Ponteiros em todo lado
-- Alocação dinâmica (malloc/free) sem vazamentos (testar com `valgrind` no Linux)
-- Lista encadeada (obstáculos da Corrida de Ponteiros + ranking)
-- Matriz 2D (grid do Estouro de Pilha)
-- Arquivo E/S (`scores.dat`)
-- Animação + movimento
-- Colisão (AABB na Corrida de Ponteiros, bola no Pong, grid no Estouro de Pilha)
-
-## ATENÇÃO — Política de IA
-
-> O enunciado da disciplina diz textualmente: **"o uso de ferramentas de geração de código (ex. GitHub Copilot, ChatGPT para código) zera a nota integralmente. Cada membro deve entender e saber explicar qualquer linha do projeto."**
-
-Os comentários deste esqueleto descrevem **a ideia** e **o passo a passo**, mas o código você escreve você mesmo. Use os comentários como roteiro de estudo, não como cola.
-
-## Cronograma resumido
-
-| Semana | Datas         | Foco                              |
-|--------|---------------|-----------------------------------|
-| 1      | 26/04 - 02/05 | entities + physics + linked_list + tournament + scores + menu |
-| 2      | 03/05 - 09/05 | Corrida de Ponteiros + Pong + Estouro de Pilha jogáveis |
-| 3      | 10/05 - 16/05 | Integração com tournament + UI final |
-| 4      | 17/05 - 23/05 | Testes (valgrind), correção de bugs, vídeo de demonstração, slides |
-| 5      | 24/05 - 31/05 | Reserva / congelamento do repositório |
-
-**Entrega final: 31/05/2026 — 23:59.**
-
-## Problemas comuns no Windows
-
-- **`gcc: command not found`** — você não reabriu o PowerShell após editar o PATH, ou o caminho `C:\raylib\raylib\mingw\bin` está diferente do que ficou na sua máquina. Verifique com `Get-ChildItem C:\raylib\raylib\mingw\bin\gcc.exe`.
-- **`raylib.h: No such file`** — sua Raylib foi extraída em outro caminho. Edite a variável `RAYLIB_PATH` no Makefile, ou rode `mingw32-make RAYLIB_PATH=C:/seu/caminho/raylib`.
-- **`undefined reference to WinMain`** — você tentou compilar com `-mwindows` em algum lugar. O Makefile deste projeto NÃO usa essa flag, então a janela do jogo abre junto de um console (útil para debug). Para esconder o console na entrega final, adicione `-mwindows` ao `LDFLAGS` do bloco Windows.
+  </details>
