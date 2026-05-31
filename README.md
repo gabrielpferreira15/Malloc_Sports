@@ -34,8 +34,6 @@ Clique <stong>[aqui](https://www.youtube.com/watch?v=6qEo1TM3fwI)</strong> para 
 
 </details>
 
-
-
 ## 👥 Equipe
 
 <details>
@@ -94,7 +92,7 @@ O código do projeto reflete um design modular e a aplicação prática de conce
 <details>
 <summary><strong> Ver Guia </strong></summary>
 
-Este documento explica como configurar o ambiente, compilar e executar o **Malloc Sports** em diferentes sistemas operacionais (**Windows, Linux e macOS**), utilizando o `Makefile` incluso no projeto.
+Está sessão do README explica como configurar o ambiente, compilar e executar o **Malloc Sports** em diferentes sistemas operacionais (**Windows, Linux e macOS**), utilizando o `Makefile` incluso no projeto.
 
 ### Estrutura de Pastas Esperada
 
@@ -104,7 +102,7 @@ Para que a compilação funcione corretamente, certifique-se de que a estrutura 
 ├── 📂 Include/          # Todos os arquivos de cabeçalho (.h)
 ├── 📂 src/              # Todos os arquivos de código-fonte (.c)
 ├── 📄 Makefile          # Arquivo de automação da compilação
-└── 📄 highscores.txt    # Arquivo de persistência (gerado automaticamente)
+├── 📄 highscores.txt    # Arquivo de persistência (gerado automaticamente)
 ```
 
 ---
