@@ -4,8 +4,8 @@
 
 #define LARGURA             1280
 #define ALTURA               720
-#define RAQUETE_W             16
-#define RAQUETE_H            100
+#define RAQUETE_W             63
+#define RAQUETE_H             93
 #define VEL_RAQUETE         450.0f
 #define BOLA_RAIO             10
 #define VEL_BOLA_X_INICIAL  350.0f
@@ -72,9 +72,11 @@ static void resetar_bola(Bola *b, int *direcao_saque, float *tempo_saque) {
 }
 
 int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
-    // ==========================================
-    // 1. CARREGAR MÚLTIPLAS IMAGENS
-    // ==========================================
+    Texture2D fundo = LoadTexture("assets/sprites/background_pong.png");
+
+    Texture2D raquete_p1 = LoadTexture("assets/sprites/raquete1.png");
+    Texture2D raquete_p2 = LoadTexture("assets/sprites/raquete2.png");
+
     Texture2D texturas_bola[NUM_FRAMES];
     bool texturas_validas = true;
 
@@ -508,7 +510,15 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
         // DRAW
         BeginDrawing();
 
-            ClearBackground(BLACK);
+            
+            DrawTexturePro(
+                fundo,
+                (Rectangle){0, 0, fundo.width, fundo.height},
+                (Rectangle){0, 0, LARGURA, ALTURA},
+                (Vector2){0, 0},
+                0.0f,
+                WHITE
+            );
 
             if (flash_p1 > 0.0f) {
 
@@ -552,19 +562,41 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
                     (Color){80, 80, 80, 200}
                 );
 
-            DrawRectangle(
-                (int)r1.x,
-                (int)r1.y,
-                RAQUETE_W,
-                RAQUETE_H,
+            DrawTexturePro(
+                raquete_p1,
+                (Rectangle){
+                    0,
+                    0,
+                    raquete_p1.width,
+                    raquete_p1.height
+                },
+                (Rectangle){
+                    r1.x,
+                    r1.y,
+                    RAQUETE_W,
+                    RAQUETE_H
+                },
+                (Vector2){0,0},
+                0.0f,
                 WHITE
             );
 
-            DrawRectangle(
-                (int)r2.x,
-                (int)r2.y,
-                RAQUETE_W,
-                RAQUETE_H,
+            DrawTexturePro(
+                raquete_p2,
+                (Rectangle){
+                    0,
+                    0,
+                    raquete_p2.width,
+                    raquete_p2.height
+                },
+                (Rectangle){
+                    r2.x,
+                    r2.y,
+                    RAQUETE_W,
+                    RAQUETE_H
+                },
+                (Vector2){0,0},
+                0.0f,
                 WHITE
             );
 
@@ -748,6 +780,10 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
             UnloadTexture(texturas_bola[i]);
         }
     }
+    UnloadTexture(fundo);
+
+    UnloadTexture(raquete_p1);
+    UnloadTexture(raquete_p2);
 
     if (vencedor == 0)
         vencedor = (pts1 >= pts2) ? 1 : 2;
