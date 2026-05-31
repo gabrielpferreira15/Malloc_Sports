@@ -4,7 +4,7 @@
 #include <math.h>
 
 /* ------------------------------------------------------------------ */
-/*  Constantes de layout                                               */
+/* Constantes de layout                                               */
 /* ------------------------------------------------------------------ */
 #define LARGURA           1280
 #define ALTURA             720
@@ -33,7 +33,7 @@
 #define META_X             (PISTA_COMPRIMENTO - 60.0f)
 
 /* ------------------------------------------------------------------ */
-/*  Constantes de jogabilidade                                         */
+/* Constantes de jogabilidade                                         */
 /* ------------------------------------------------------------------ */
 #define VEL_BASE           1.0f   /* px/s sem nenhum combo           */
 #define FATOR_COMBO          8.0f   /* px/s adicionais por combo       */
@@ -47,7 +47,7 @@
 #define NUM_FRAMES_FUNDO 3
 
 /* ------------------------------------------------------------------ */
-/*  Structs                                                            */
+/* Structs                                                            */
 /* ------------------------------------------------------------------ */
 
 /* Posição lógica na pista (x = progresso, y = altura do pulo) */
@@ -70,7 +70,7 @@ typedef struct {
 } Obstaculo;
 
 /* ------------------------------------------------------------------ */
-/*  Configurações de obstáculos                                        */
+/* Configurações de obstáculos                                        */
 /* ------------------------------------------------------------------ */
 #define MAX_OBSTACULOS  4
 
@@ -86,7 +86,7 @@ static const ConfigObstaculos CONFIGS[3] = {
 };
 
 /* ------------------------------------------------------------------ */
-/*  Funções auxiliares                                                 */
+/* Funções auxiliares                                                 */
 /* ------------------------------------------------------------------ */
 
 static float clampf(float v, float lo, float hi) {
@@ -131,7 +131,7 @@ static void atualizar_velocidade(Corredor *c) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Funções de desenho                                                 */
+/* Funções de desenho                                                 */
 /* ------------------------------------------------------------------ */
 
 static void desenhar_pista(int pista_y, Color cor_pista) {
@@ -153,7 +153,8 @@ static void desenhar_pista(int pista_y, Color cor_pista) {
 static void desenhar_obstaculos(const Obstaculo *obs, int qtd, int pista_y) {
     for (int i = 0; i < qtd; i++) {
         float tx = pista_para_tela_x(obs[i].x);
-        float ty = (float)pista_y - (float)OBST_H;
+        
+        float ty = (float)pista_y + (float)CORREDOR_H - (float)OBST_H;
 
         DrawRectangle(
             (int)(tx - OBST_W / 2),
@@ -203,14 +204,13 @@ static void contagem_regressiva(void) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Função principal do minigame                                       */
+/* Função principal do minigame                                       */
 /* ------------------------------------------------------------------ */
 int jogar_corrida_ponteiros(int *pontos_p1, int *pontos_p2) {
 
     Texture2D fundo_p1[NUM_FRAMES_FUNDO];
 
     for (int i = 0; i < NUM_FRAMES_FUNDO; i++) {
-
         fundo_p1[i] = LoadTexture(
             TextFormat("assets/sprites/p1fundo_pista%d.png", i)
         );
@@ -219,7 +219,6 @@ int jogar_corrida_ponteiros(int *pontos_p1, int *pontos_p2) {
     Texture2D fundo_p2[NUM_FRAMES_FUNDO];
 
     for (int i = 0; i < NUM_FRAMES_FUNDO; i++) {
-
         fundo_p2[i] = LoadTexture(
             TextFormat("assets/sprites/p2fundo_pista%d.png", i)
         );
@@ -279,86 +278,65 @@ int jogar_corrida_ponteiros(int *pontos_p1, int *pontos_p2) {
         tempo_fundo += dt;
 
         if (tempo_fundo >= velocidade_fundo) {
-
             tempo_fundo = 0.0f;
-
             frame_fundo++;
-
             if (frame_fundo >= NUM_FRAMES_FUNDO)
                 frame_fundo = 0;
         }
 
         // ANIMAÇÃO P1
-
         if (!p1.no_chao) {
-
-            // frame de pulo
             frame_p1 = 6;
-
         } else if (p1.combo == 0) {
-
-            // parado
             frame_p1 = 0;
-
         } else {
-
             tempo_anim_p1 += dt;
-
             if (tempo_anim_p1 >= velocidade_animacao) {
-
                 tempo_anim_p1 = 0.0f;
-
                 frame_p1++;
-
                 if (frame_p1 < 1 || frame_p1 > 5)
                     frame_p1 = 1;
             }
         }
 
         // ANIMAÇÃO P2
-
         if (!p2.no_chao) {
-
             frame_p2 = 6;
-
         } else if (p2.combo == 0) {
-
             frame_p2 = 0;
-
         } else {
-
             tempo_anim_p2 += dt;
-
             if (tempo_anim_p2 >= velocidade_animacao) {
-
                 tempo_anim_p2 = 0.0f;
-
                 frame_p2++;
-
                 if (frame_p2 < 1 || frame_p2 > 5)
                     frame_p2 = 1;
             }
         }
 
         /* ---- INPUT + MOVIMENTO: helper macro para cada jogador ---- */
-
-        /* Processa um corredor: alternância de teclas e pulo. */
         #define PROCESSAR_CORREDOR(c)                                       \
         do {                                                                \
-            /* Alternância de teclas de corrida */                          \
             bool pressionou_esq = IsKeyPressed((c).tecla_esq);              \
             bool pressionou_dir = IsKeyPressed((c).tecla_dir);              \
             if (pressionou_esq || pressionou_dir) {                         \
-                bool acertou = (c).esperando_dir ? pressionou_dir           \
-                    : pressionou_esq;                                       \
-                if (acertou) {                                              \
-                    (c).combo++;                                            \
-                    (c).esperando_dir = !(c).esperando_dir;                 \
-                    atualizar_velocidade(&(c));                             \
+                if (pressionou_esq && pressionou_dir) {                     \
+                    (c).combo = 0; /* Apertar as duas junto zera o combo*/  \
+                } else if ((c).combo == 0) {                                \
+                    (c).combo = 1; /* Inicia o combo com o 1º acerto */     \
+                    /* Se apertou Esq(true), na próxima espera Dir(true) */ \
+                    (c).esperando_dir = pressionou_esq;                     \
                 } else {                                                    \
-                    (c).combo = 0;                                          \
-                    atualizar_velocidade(&(c));                             \
+                    bool acertou = (c).esperando_dir ? pressionou_dir       \
+                                                    : pressionou_esq;       \
+                    if (acertou) {                                          \
+                        (c).combo++;                                        \
+                        (c).esperando_dir = !(c).esperando_dir;             \
+                    } else {                                                \
+                        (c).combo = 0;                                      \
+                    }                                                       \
                 }                                                           \
+                atualizar_velocidade(&(c));                                 \
             }                                                               \
             /* Pulo */                                                      \
             if (IsKeyPressed((c).tecla_pulo) && (c).no_chao) {              \
@@ -371,11 +349,11 @@ int jogar_corrida_ponteiros(int *pontos_p1, int *pontos_p2) {
         PROCESSAR_CORREDOR(p2);
         #undef PROCESSAR_CORREDOR
 
-        /* ---- UPDATE: posição horizontal ---- */
+        /* ---- posição horizontal ---- */
         p1.x += p1.vel * dt;
         p2.x += p2.vel * dt;
 
-        /* ---- UPDATE: física do pulo ---- */
+        /* ---- física do pulo ---- */
         #define ATUALIZAR_PULO(c)                                           \
         do {                                                                \
             if (!(c).no_chao) {                                             \
@@ -398,30 +376,34 @@ int jogar_corrida_ponteiros(int *pontos_p1, int *pontos_p2) {
 
             /* Posição de tela do corredor P1 */
             float p1_tx = pista_para_tela_x(p1.x) - CORREDOR_W / 2.0f;
-            float p1_ty = (float)(PISTA_Y_P1) - (float)(CORREDOR_H) - p1.y_pulo;
+            float p1_ty = PISTA_Y_P1 - p1.y_pulo;
             float o_tx  = pista_para_tela_x(obstaculos[i].x) - OBST_W / 2.0f;
-            float o_ty  = (float)(PISTA_Y_P1) - (float)(OBST_H);
+            float o_ty = PISTA_Y_P1 + CORREDOR_H - OBST_H;
 
-            if (p1.no_chao &&  /* só colide se estiver no chão */
-                colide_aabb(p1_tx, p1_ty, CORREDOR_W, CORREDOR_H,
+            /* CORREÇÃO AQUI: Em vez de zerar o combo na colisão, subtrai o equivalente a perder 80 de velocidade. */
+            if (colide_aabb(p1_tx, p1_ty, CORREDOR_W, CORREDOR_H,
                     o_tx,  o_ty,  OBST_W,    OBST_H)) {
-                p1.vel  = clampf(p1.vel - PENALIDADE_COLISAO, VEL_BASE, 9999.0f);
-                p1.combo = 0;
-                /* Empurra o corredor para além do obstáculo para não ficar "preso" */
-                p1.x = obstaculos[i].x + (PISTA_COMPRIMENTO / (float)LARGURA) * (OBST_W + 4);
+                
+                p1.combo -= (int)(PENALIDADE_COLISAO / FATOR_COMBO); 
+                if (p1.combo < 0) p1.combo = 0;
+                atualizar_velocidade(&p1);
+                
+                p1.x = obstaculos[i].x + ((OBST_W + CORREDOR_W) / 2.0f + 1.0f) * (PISTA_COMPRIMENTO / (float)(LARGURA - HUD_LARGURA));
             }
 
             /* Posição de tela do corredor P2 */
             float p2_tx = pista_para_tela_x(p2.x) - CORREDOR_W / 2.0f;
-            float p2_ty = (float)(PISTA_Y_P2) - (float)(CORREDOR_H) - p2.y_pulo;
-            float o2_ty = (float)(PISTA_Y_P2) - (float)(OBST_H);
+            float p2_ty = PISTA_Y_P2 - p2.y_pulo;
+            float o2_ty = PISTA_Y_P2 + CORREDOR_H - OBST_H;
 
-            if (p2.no_chao &&
-                colide_aabb(p2_tx, p2_ty, CORREDOR_W, CORREDOR_H,
+            if (colide_aabb(p2_tx, p2_ty, CORREDOR_W, CORREDOR_H,
                     o_tx,  o2_ty, OBST_W,    OBST_H)) {
-                p2.vel  = clampf(p2.vel - PENALIDADE_COLISAO, VEL_BASE, 9999.0f);
-                p2.combo = 0;
-                p2.x = obstaculos[i].x + (PISTA_COMPRIMENTO / (float)LARGURA) * (OBST_W + 4);
+                
+                p2.combo -= (int)(PENALIDADE_COLISAO / FATOR_COMBO);
+                if (p2.combo < 0) p2.combo = 0;
+                atualizar_velocidade(&p2);
+
+                p2.x = obstaculos[i].x + ((OBST_W + CORREDOR_W) / 2.0f + 1.0f) * (PISTA_COMPRIMENTO / (float)(LARGURA - HUD_LARGURA));
             }
         }
 
@@ -475,10 +457,8 @@ int jogar_corrida_ponteiros(int *pontos_p1, int *pontos_p2) {
             desenhar_pista(PISTA_Y_P2, (Color){30, 30, 50, 255});
 
             /* Obstáculos */
-            desenhar_obstaculos(obstaculos, cfg->quantidade,
-                PISTA_Y_P1);
-            desenhar_obstaculos(obstaculos, cfg->quantidade,
-                PISTA_Y_P2);
+            desenhar_obstaculos(obstaculos, cfg->quantidade, PISTA_Y_P1);
+            desenhar_obstaculos(obstaculos, cfg->quantidade, PISTA_Y_P2);
 
             /* Corredores */
             float p1_x = pista_para_tela_x(p1.x);
@@ -557,7 +537,6 @@ int jogar_corrida_ponteiros(int *pontos_p1, int *pontos_p2) {
         UnloadTexture(p2_frames[i]);
     }
     for (int i = 0; i < NUM_FRAMES_FUNDO; i++) {
-
         UnloadTexture(fundo_p1[i]);
         UnloadTexture(fundo_p2[i]);
     }
