@@ -32,7 +32,7 @@ Cena tela_resultado(ResultadoPartida r);
 
 /* Pede o nome (máx 4 caracteres) de cada jogador antes do torneio.
  * nome_p1 e nome_p2 devem ser buffers de NOME_JOGADOR_TAM bytes. */
-void tela_inserir_nomes(char *nome_p1, char *nome_p2);
+Cena tela_inserir_nomes(char *nome_p1, char *nome_p2);
 
 /* Exibe o ranking das 10 melhores pontuações em grade 2×5. */
 Cena tela_highscores(void);
