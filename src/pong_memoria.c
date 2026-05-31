@@ -13,8 +13,8 @@
 #define VEL_MAX_X           800.0f
 #define VEL_MAX_Y_ANGULO    500.0f
 #define ACELERACAO_POR_PT     1.1f
-#define DURACAO_PARTIDA      60.0f
-#define TEMPO_SAQUE           1.0f
+#define DURACAO_PARTIDA      90.0f
+#define TEMPO_SAQUE           2.0f
 #define POWERUP_INTERVALO     8.0f
 #define BOOST_DURACAO         3.0f
 #define BOOST_FATOR           2.0f
@@ -755,7 +755,7 @@ int jogar_pong_memoria(int *pontos_p1, int *pontos_p2) {
                     LARGURA / 2 - MeasureText(timer_txt, fs_timer) / 2,
                     20,
                     fs_timer,
-                    RAYWHITE
+                    YELLOW
                 );
             }
 

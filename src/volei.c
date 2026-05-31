@@ -23,12 +23,12 @@
 
 #define BOLA_RAIO 24
 
-#define DURACAO_PARTIDA      60.0f
+#define DURACAO_PARTIDA      90.0f
 
 #define VEL_BOLA_X_INICIAL 300.0f
 #define VEL_BOLA_Y_INICIAL -200.0f
 
-#define TEMPO_SAQUE 1.0f
+#define TEMPO_SAQUE 2.0f
 
 #define MAX_TOQUES 3
 
