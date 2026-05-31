@@ -89,9 +89,18 @@ int main(void) {
 
                 if (em_torneio) {
                     registrar_resultado(&torneio, vencedor);
-                    // Passa os valores fixos (500 e 200) para acumular no torneio
-                    acumular_pontuacao(&torneio, pts1_calc, pts2_calc);
+                    
+                    // Somamos ao torneio os pontos já calculados pela fórmula
+                    acumular_pontuacao(&torneio, resultado.pontos_p1, resultado.pontos_p2);
+                    
+                    // Salva o estado do placar geral acumulado para o menu exibir
+                    resultado.pontos_torneio_p1 = torneio.pontuacoes[0];
+                    resultado.pontos_torneio_p2 = torneio.pontuacoes[1];
+                } else {
+                    resultado.pontos_torneio_p1 = 0;
+                    resultado.pontos_torneio_p2 = 0;
                 }
+
                 cena_atual = WindowShouldClose() ? CENA_SAIR : CENA_RESULTADO;
                 break;
             }
@@ -100,14 +109,14 @@ int main(void) {
                 int pts1_cru = 0, pts2_cru = 0;
                 int vencedor = jogar_pong_memoria(&pts1_cru, &pts2_cru);
 
-                // 1. Calcula a pontuação com base na fórmula
-                int pts1_calc = (pts1_cru * 100) + (vencedor == 1 ? 300 : 0);
-                int pts2_calc = (pts2_cru * 100) + (vencedor == 2 ? 300 : 0);
+                // 1. Calcula a pontuação com base na fórmula original (PRESERVADA)
+                int pts1_calc = (pts1_cru * 100) + (vencedor == 1 ? 200 : 0);
+                int pts2_calc = (pts2_cru * 100) + (vencedor == 2 ? 200 : 0);
 
                 // 2. Preenche a estrutura de resultado para a tela intermediária
                 resultado.vencedor = vencedor;
-                resultado.pontos_p1 = pts1_calc;  // <-- CORREÇÃO: mude de pts1_cru para pts1_calc
-                resultado.pontos_p2 = pts2_calc;  // <-- CORREÇÃO: mude de pts2_cru para pts2_calc
+                resultado.pontos_p1 = pts1_calc; 
+                resultado.pontos_p2 = pts2_calc; 
                 resultado.em_torneio = em_torneio;
                 resultado.torneio_final = false;
                 resultado.ultimo_jogo = CENA_PONG;
@@ -115,6 +124,14 @@ int main(void) {
                 if (em_torneio) {
                     registrar_resultado(&torneio, vencedor);
                     acumular_pontuacao(&torneio, pts1_calc, pts2_calc);
+                    
+                    // NOVO: Salva os pontos totais acumulados até esta partida do Pong
+                    resultado.pontos_torneio_p1 = torneio.pontuacoes[0];
+                    resultado.pontos_torneio_p2 = torneio.pontuacoes[1];
+                } else {
+                    // Modo avulso deixa zerado
+                    resultado.pontos_torneio_p1 = 0;
+                    resultado.pontos_torneio_p2 = 0;
                 }
                 cena_atual = WindowShouldClose() ? CENA_SAIR : CENA_RESULTADO;
                 break;
@@ -124,50 +141,71 @@ int main(void) {
                 int pts1_cru = 0, pts2_cru = 0;
                 int vencedor = jogar_volei(&pts1_cru, &pts2_cru);
 
-                // Cálculo: Pontos * 100 + Bônus de 300 para o ganhador
-                int pts1_calc = (pts1_cru * 100) + (vencedor == 1 ? 300 : 0);
-                int pts2_calc = (pts2_cru * 100) + (vencedor == 2 ? 300 : 0);
+                // Cálculo: Pontos * 100 + Bônus de 200 para o ganhador
+                int pts1_calc = (pts1_cru * 100) + (vencedor == 1 ? 200 : 0);
+                int pts2_calc = (pts2_cru * 100) + (vencedor == 2 ? 200 : 0);
 
-                resultado.vencedor = vencedor;
                 resultado.pontos_p1 = pts1_calc;
                 resultado.pontos_p2 = pts2_calc;
-                resultado.em_torneio = em_torneio;
-                resultado.torneio_final = false;
                 resultado.ultimo_jogo = CENA_VOLEI;
+                resultado.em_torneio = em_torneio;
 
                 if (em_torneio) {
-                    registrar_resultado(&torneio, vencedor);
+                    // 1. Acumula os pontos do vôlei nas pontuações globais do torneio
                     acumular_pontuacao(&torneio, pts1_calc, pts2_calc);
+                    registrar_resultado(&torneio, vencedor);
+
+                    // 2. Como o vôlei é o último, ativa direto a tela final do torneio
+                    resultado.torneio_final = true;
+                    resultado.vencedor = vencedor_torneio(&torneio);
+                    
+                    // 3. Salva os pontos totais acumulados de todo o torneio
+                    resultado.pontos_torneio_p1 = torneio.pontuacoes[0];
+                    resultado.pontos_torneio_p2 = torneio.pontuacoes[1];
+
+                    // ==== LÓGICA DO TOP 10 NO FINAL DO TORNEIO ====
+                    Score *lista = scores_carregar(SCORES_ARQUIVO);
+                    lista = scores_inserir(lista, torneio.nomes[0], torneio.pontuacoes[0]);
+                    lista = scores_inserir(lista, torneio.nomes[1], torneio.pontuacoes[1]);
+                    scores_salvar(SCORES_ARQUIVO, lista);
+                    scores_liberar(lista);
+                } else {
+                    // Se for modo avulso normal, segue o padrão sem tela de torneio
+                    resultado.torneio_final = false;
+                    resultado.vencedor = vencedor;
                 }
+
                 cena_atual = WindowShouldClose() ? CENA_SAIR : CENA_RESULTADO;
                 break;
             }
 
             case CENA_RESULTADO:
-                // Se acabamos de vir de um jogo em torneio, vamos ver se era o final
-                if (em_torneio && torneio_acabou(&torneio) && !resultado.torneio_final) {
-                    resultado.torneio_final = true;
-                    // Define o vencedor pela pontuação final acumulada
-                    resultado.vencedor = (torneio.pontuacoes[0] > torneio.pontuacoes[1]) ? 1 : (torneio.pontuacoes[1] > torneio.pontuacoes[0] ? 2 : 0);
-                    resultado.pontos_p1 = torneio.pontuacoes[0];
-                    resultado.pontos_p2 = torneio.pontuacoes[1];
-
-                    // ==== LÓGICA DO TOP 10 NO FINAL DO TORNEIO ====
-                    Score *lista = scores_carregar(SCORES_ARQUIVO);
-                    
-                    // Insere jogador 1 e depois jogador 2 (se entrarem no top 10, a própria função organiza e corta os piores)
-                    lista = scores_inserir(lista, torneio.nomes[0], torneio.pontuacoes[0]);
-                    lista = scores_inserir(lista, torneio.nomes[1], torneio.pontuacoes[1]);
-                    
-                    scores_salvar(SCORES_ARQUIVO, lista); // Salva sobreescrevendo com "w" e formatação correta
-                    scores_liberar(lista);
-                }
-
                 cena_atual = tela_resultado(resultado);
                 if (cena_atual == CENA_MENU) {
                     em_torneio = false;
                 } else if (cena_atual != CENA_SAIR && em_torneio && !resultado.torneio_final) {
-                    cena_atual = proxima_cena_torneio(&torneio);
+                    
+                    // SE O TORNEIO ACABOU APÓS ESSA PARTIDA:
+                    if (torneio_acabou(&torneio)) {
+                        // Prepara os dados para exibir o grande vencedor do TORNEIO
+                        resultado.torneio_final = true;
+                        resultado.vencedor = vencedor_torneio(&torneio);
+                        resultado.pontos_p1 = torneio.pontuacoes[0];
+                        resultado.pontos_p2 = torneio.pontuacoes[1];
+
+                        // ==== SALVA NO TOP 10 APENAS AQUI NO FIM DE TUDO ====
+                        Score *lista = scores_carregar(SCORES_ARQUIVO);
+                        lista = scores_inserir(lista, torneio.nomes[0], torneio.pontuacoes[0]);
+                        lista = scores_inserir(lista, torneio.nomes[1], torneio.pontuacoes[1]);
+                        scores_salvar(SCORES_ARQUIVO, lista);
+                        scores_liberar(lista);
+
+                        // Força o jogo a continuar na CENA_RESULTADO, mas agora com os dados do torneio!
+                        cena_atual = CENA_RESULTADO;
+                    } else {
+                        // Se não acabou, segue normal para o próximo minigame do torneio
+                        cena_atual = proxima_cena_torneio(&torneio);
+                    }
                 }
                 break;
 

@@ -193,9 +193,10 @@ Cena tela_resultado(ResultadoPartida r) {
     const int W = GetScreenWidth();
     const int H = GetScreenHeight();
 
+    // Botões movidos estrategicamente para baixo para evitar qualquer sobreposição
     float bx = W / 2.0f - 180;
-    Rectangle btn_principal = { bx, H / 2.0f + 40,  360, 60 };
-    Rectangle btn_menu      = { bx, H / 2.0f + 120, 360, 60 };
+    Rectangle btn_principal = { bx, (float)H - 190, 360, 55 };
+    Rectangle btn_menu      = { bx, (float)H - 120, 360, 55 };
 
     /* Mensagem de vencedor */
     const char *msg_venc;
@@ -214,14 +215,6 @@ Cena tela_resultado(ResultadoPartida r) {
     if (r.torneio_final)   texto_btn = "Voltar ao Menu";
     else if (r.em_torneio) texto_btn = "Próximo Jogo";
     else                   texto_btn = "Revanche";
-
-    /* Fonte de pontuação: menor para números grandes (torneio final). */
-    int pts_fs = r.torneio_final ? 44 : 80;
-
-    /* Label de contexto acima dos números. */
-    const char *label_ctx = r.torneio_final
-        ? "Pontuação total do torneio"
-        : NULL;
 
     Cena cena_atual = CENA_RESULTADO;
 
@@ -242,61 +235,108 @@ Cena tela_resultado(ResultadoPartida r) {
             ClearBackground(BLACK);
             DrawRectangle(0, 0, W, 8, (Color){255, 210, 0, 255});
 
-            if (r.torneio_final)
+            if (r.torneio_final) {
                 DrawText("RESULTADO DO TORNEIO",
                     W / 2 - MeasureText("RESULTADO DO TORNEIO", 30) / 2,
-                    18, 30, GOLD);
+                    20, 30, GOLD);
+            } else {
+                DrawText("RESULTADO DA PARTIDA",
+                    W / 2 - MeasureText("RESULTADO DA PARTIDA", 30) / 2,
+                    20, 30, RAYWHITE);
+            }
 
-            /* Vencedor */
-            int mv = 48;
+            /* Mensagem do Vencedor */
+            int mv = 44;
             DrawText(msg_venc,
                 W / 2 - MeasureText(msg_venc, mv) / 2,
-                H / 2 - 150, mv, YELLOW);
+                100, mv, YELLOW);
 
-            /* Contexto (torneio final) */
-            if (label_ctx)
-                DrawText(label_ctx,
-                    W / 2 - MeasureText(label_ctx, 20) / 2,
-                    H / 2 - 90, 20, LIGHTGRAY);
+            /* ============================================================
+               PLACAR CONDICIONAL REORGANIZADO
+               ============================================================ */
+            
+            if (r.torneio_final) {
+                // FIM DO TORNEIO: Exibe o placar direto do Vôlei E o placar acumulado total
+                
+                // 1. Placar Direto do Vôlei (Último jogo)
+                const char *volei_p1 = TextFormat("Vôlei: %d pts", r.pontos_p1);
+                const char *volei_p2 = TextFormat("Vôlei: %d pts", r.pontos_p2);
 
-            /* Placar */
-            const char *str_p1 = TextFormat("%d", r.pontos_p1);
-            const char *str_p2 = TextFormat("%d", r.pontos_p2);
+                DrawText("ÚLTIMO JOGO", W / 2 - MeasureText("ÚLTIMO JOGO", 18) / 2, H / 2 - 130, 18, GRAY);
+                DrawText(volei_p1, W / 2 - 180 - MeasureText(volei_p1, 22) / 2, H / 2 - 105, 22, LIGHTGRAY);
+                DrawText("x", W / 2 - MeasureText("x", 22) / 2, H / 2 - 105, 22, DARKGRAY);
+                DrawText(volei_p2, W / 2 + 180 - MeasureText(volei_p2, 22) / 2, H / 2 - 105, 22, LIGHTGRAY);
 
-            /* P1 */
-            DrawText("P1",
-                W / 2 - 160 - MeasureText("P1", 24) / 2,
-                H / 2 - 60, 24, LIGHTGRAY);
-            DrawText(str_p1,
-                W / 2 - 160 - MeasureText(str_p1, pts_fs) / 2,
-                H / 2 - 30, pts_fs,
-                r.vencedor == 1 ? YELLOW : GRAY);
+                // Linha divisória fina para separar as informações
+                DrawLine(W / 2 - 200, H / 2 - 65, W / 2 + 200, H / 2 - 65, (Color){60, 60, 60, 255});
 
-            /* Separador */
-            DrawText("x",
-                W / 2 - MeasureText("x", pts_fs) / 2,
-                H / 2 - 30, pts_fs, DARKGRAY);
+                // 2. Pontuação Geral Acumulada do Torneio Completo
+                const char *total_p1 = TextFormat("%d", r.pontos_torneio_p1);
+                const char *total_p2 = TextFormat("%d", r.pontos_torneio_p2);
 
-            /* P2 */
-            DrawText("P2",
-                W / 2 + 160 - MeasureText("P2", 24) / 2,
-                H / 2 - 60, 24, LIGHTGRAY);
-            DrawText(str_p2,
-                W / 2 + 160 - MeasureText(str_p2, pts_fs) / 2,
-                H / 2 - 30, pts_fs,
-                r.vencedor == 2 ? YELLOW : GRAY);
+                DrawText("PONTUAÇÃO TOTAL DO TORNEIO", W / 2 - MeasureText("PONTUAÇÃO TOTAL DO TORNEIO", 18) / 2, H / 2 - 45, 18, GOLD);
+                
+                /* P1 */
+                DrawText("P1", W / 2 - 180 - MeasureText("P1", 24) / 2, H / 2 - 15, 24, LIGHTGRAY);
+                DrawText(total_p1, W / 2 - 180 - MeasureText(total_p1, 54) / 2, H / 2 + 15, 54, r.vencedor == 1 ? YELLOW : RAYWHITE);
 
-            /* Botões */
+                /* Separador */
+                DrawText("x", W / 2 - MeasureText("x", 40) / 2, H / 2 + 20, 40, DARKGRAY);
+
+                /* P2 */
+                DrawText("P2", W / 2 + 180 - MeasureText("P2", 24) / 2, H / 2 - 15, 24, LIGHTGRAY);
+                DrawText(total_p2, W / 2 + 180 - MeasureText(total_p2, 54) / 2, H / 2 + 15, 54, r.vencedor == 2 ? YELLOW : RAYWHITE);
+            }
+            else if (r.em_torneio) {
+                // DURANTE O TORNEIO (Após Pong ou Corrida)
+                const char *jogo_p1  = TextFormat("Jogo: %d pts", r.pontos_p1);
+                const char *total_p1 = TextFormat("Total: %d", r.pontos_torneio_p1);
+                const char *jogo_p2  = TextFormat("Jogo: %d pts", r.pontos_p2);
+                const char *total_p2 = TextFormat("Total: %d", r.pontos_torneio_p2);
+
+                /* P1 (Esquerda) */
+                DrawText("P1", W / 2 - 160 - MeasureText("P1", 24) / 2, H / 2 - 65, 24, LIGHTGRAY);
+                DrawText(jogo_p1, W / 2 - 160 - MeasureText(jogo_p1, 20) / 2, H / 2 - 38, 20, GRAY);
+                DrawText(total_p1, W / 2 - 160 - MeasureText(total_p1, 32) / 2, H / 2 - 12, 32, r.vencedor == 1 ? YELLOW : RAYWHITE);
+
+                /* Separador Central */
+                DrawText("x", W / 2 - MeasureText("x", 32) / 2, H / 2 - 12, 32, DARKGRAY);
+
+                /* P2 (Direita) */
+                DrawText("P2", W / 2 + 160 - MeasureText("P2", 24) / 2, H / 2 - 65, 24, LIGHTGRAY);
+                DrawText(jogo_p2, W / 2 + 160 - MeasureText(jogo_p2, 20) / 2, H / 2 - 38, 20, GRAY);
+                DrawText(total_p2, W / 2 + 160 - MeasureText(total_p2, 32) / 2, H / 2 - 12, 32, r.vencedor == 2 ? YELLOW : RAYWHITE);
+            } 
+            else {
+                // JOGO AVULSO NORMAL: Exibe puramente e direto a pontuação da partida grande e limpa
+                const char *str_p1 = TextFormat("%d", r.pontos_p1);
+                const char *str_p2 = TextFormat("%d", r.pontos_p2);
+
+                /* P1 */
+                DrawText("P1", W / 2 - 160 - MeasureText("P1", 24) / 2, H / 2 - 60, 24, LIGHTGRAY);
+                DrawText(str_p1, W / 2 - 160 - MeasureText(str_p1, 80) / 2, H / 2 - 30, 80, r.vencedor == 1 ? YELLOW : GRAY);
+
+                /* Separador */
+                DrawText("x", W / 2 - MeasureText("x", 80) / 2, H / 2 - 30, 80, DARKGRAY);
+
+                /* P2 */
+                DrawText("P2", W / 2 + 160 - MeasureText("P2", 24) / 2, H / 2 - 60, 24, LIGHTGRAY);
+                DrawText(str_p2, W / 2 + 160 - MeasureText(str_p2, 80) / 2, H / 2 - 30, 80, r.vencedor == 2 ? YELLOW : GRAY);
+            }
+            /* ============================================================ */
+
+            /* Renderização dos Botões */
             desenhar_botao(btn_principal, texto_btn, true);
+            
             if (!r.torneio_final) {
                 desenhar_botao(btn_menu, "Voltar ao Menu", false);
                 DrawText("ENTER = Confirmar     ESC = Menu",
                     W / 2 - MeasureText("ENTER = Confirmar     ESC = Menu", 18) / 2,
-                    H - 40, 18, DARKGRAY);
+                    H - 45, 18, DARKGRAY);
             } else {
-                DrawText("ENTER = Confirmar",
-                    W / 2 - MeasureText("ENTER = Confirmar", 18) / 2,
-                    H - 40, 18, DARKGRAY);
+                DrawText("ENTER = Voltar ao Menu",
+                    W / 2 - MeasureText("ENTER = Voltar ao Menu", 18) / 2,
+                    H - 45, 18, DARKGRAY);
             }
         EndDrawing();
 

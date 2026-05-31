@@ -10,6 +10,8 @@ typedef struct {
     int  vencedor;
     int  pontos_p1;
     int  pontos_p2;
+    int  pontos_torneio_p1;  /* Pontuação acumulada do P1 no torneio */
+    int  pontos_torneio_p2;  /* Pontuação acumulada do P2 no torneio */
     bool em_torneio;
     bool torneio_final;   /* true → exibe vencedor do torneio completo */
     Cena ultimo_jogo;
