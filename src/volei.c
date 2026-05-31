@@ -16,12 +16,12 @@
 #define VELOCIDADE_JOGADOR 420.0f
 #define FORCA_PULO 650.0f
 
-#define JOGADOR_W 60
-#define JOGADOR_H 120
+#define JOGADOR_W 64
+#define JOGADOR_H 64
 
-#define CABECA_RAIO 35
+#define CABECA_RAIO 25
 
-#define BOLA_RAIO 18
+#define BOLA_RAIO 24
 
 #define DURACAO_PARTIDA      60.0f
 
@@ -35,6 +35,13 @@
 #define LADO_NENHUM 0
 #define LADO_P1 1
 #define LADO_P2 2
+
+#define NUM_FRAMES_FUNDO 3
+
+#define NUM_FRAMES_BOLA 3
+
+#define NUM_FRAMES_P1 11
+#define NUM_FRAMES_P2 11
 
 // ======================================================
 // STRUCTS
@@ -352,6 +359,40 @@ static void aplicar_ponto(
 
 int jogar_volei(int *pontos_p1, int *pontos_p2)
 {
+    Texture2D fundo_volei[NUM_FRAMES_FUNDO];
+
+    for (int i = 0; i < NUM_FRAMES_FUNDO; i++)
+    {
+        fundo_volei[i] = LoadTexture(
+            TextFormat("assets/sprites/p1fundo_pista%d.png", i)
+        );
+    }
+
+    Texture2D bola_anim[NUM_FRAMES_BOLA];
+
+    for (int i = 0; i < NUM_FRAMES_BOLA; i++)
+    {
+        bola_anim[i] = LoadTexture(
+            TextFormat("assets/sprites/bola_volei%d.png", i)
+        );
+    }
+
+    Texture2D p1_anim[NUM_FRAMES_P1];
+    Texture2D p2_anim[NUM_FRAMES_P2];
+
+    for(int i = 0; i < NUM_FRAMES_P1; i++)
+    {
+        p1_anim[i] = LoadTexture(
+            TextFormat("assets/sprites/p1_%d.png", i)
+        );
+    }
+
+    for(int i = 0; i < NUM_FRAMES_P2; i++)
+    {
+        p2_anim[i] = LoadTexture(
+            TextFormat("assets/sprites/p2_%d.png", i)
+        );
+    }
     Jogador p1 = {
 
         200,
@@ -405,11 +446,54 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
     int direcao_saque = LADO_P1;
 
     resetar_bola(&bola, &direcao_saque, &tempo_saque);
-    
+
+    int frame_fundo = 0;
+    float tempo_fundo = 0.0f;
+    const float velocidade_fundo = 0.2f;
+
+    int frame_bola = 0;
+    float tempo_bola = 0.0f;
+    const float velocidade_bola = 0.15f;
+
+    int frame_p1 = 0;
+    float tempo_anim_p1 = 0.0f;
+
+    int frame_p2 = 0;
+    float tempo_anim_p2 = 0.0f;
+
+    const float velocidade_anim = 0.12f;
+        
     while (!WindowShouldClose() && vencedor == 0)
     {
         float dt = GetFrameTime();
+        tempo_fundo += dt;
 
+        if (tempo_fundo >= velocidade_fundo)
+        {
+            tempo_fundo = 0.0f;
+
+            frame_fundo++;
+
+            if (frame_fundo >= NUM_FRAMES_FUNDO)
+                frame_fundo = 0;
+        }
+        float velocidade_visual =
+            sqrtf(
+                bola.vel_x * bola.vel_x +
+                bola.vel_y * bola.vel_y
+            );
+
+        tempo_bola += dt * (velocidade_visual / 400.0f);
+
+        if (tempo_bola >= velocidade_bola)
+        {
+            tempo_bola = 0.0f;
+
+            frame_bola++;
+
+            if (frame_bola >= NUM_FRAMES_BOLA)
+                frame_bola = 0;
+        }
         // Atualização do tempo da partida e controle de "ponto de ouro"
         if (!ponto_de_ouro) {
             tempo_restante -= dt;
@@ -465,6 +549,124 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
                 LARGURA / 2.0f + 20,
                 LARGURA
             );
+
+            // ANIMAÇÃO P1
+
+            if (!p1.no_chao)
+            {
+                frame_p1 = 10;
+            }
+            else if (p1.vel_x > 0) // indo para a rede
+            {
+                tempo_anim_p1 += dt;
+
+                if (tempo_anim_p1 >= velocidade_anim)
+                {
+                    tempo_anim_p1 = 0;
+
+                    if (frame_p1 < 5 || frame_p1 > 7)
+                        frame_p1 = 5;
+                    else
+                    {
+                        frame_p1++;
+
+                        if (frame_p1 > 7)
+                            frame_p1 = 5;
+                    }
+                }
+            }
+            else if (p1.vel_x < 0) // voltando da rede
+            {
+                tempo_anim_p1 += dt;
+
+                if (tempo_anim_p1 >= velocidade_anim)
+                {
+                    tempo_anim_p1 = 0;
+
+                    if (frame_p1 == 8)
+                        frame_p1 = 5;
+                    else if (frame_p1 == 5)
+                        frame_p1 = 9;
+                    else
+                        frame_p1 = 8;
+                }
+            }
+            else // parado
+            {
+                tempo_anim_p1 += dt;
+
+                if (tempo_anim_p1 >= velocidade_anim)
+                {
+                    tempo_anim_p1 = 0;
+
+                    if (frame_p1 > 4)
+                        frame_p1 = 0;
+
+                    frame_p1++;
+
+                    if (frame_p1 > 4)
+                        frame_p1 = 0;
+                }
+            }
+                    
+            // ANIMAÇÃO P2
+
+            if (!p2.no_chao)
+            {
+                frame_p2 = 10;
+            }
+            else if (p2.vel_x < 0) // indo para a rede
+            {
+                tempo_anim_p2 += dt;
+
+                if (tempo_anim_p2 >= velocidade_anim)
+                {
+                    tempo_anim_p2 = 0;
+
+                    if (frame_p2 < 5 || frame_p2 > 7)
+                        frame_p2 = 5;
+                    else
+                    {
+                        frame_p2++;
+
+                        if (frame_p2 > 7)
+                            frame_p2 = 5;
+                    }
+                }
+            }
+            else if (p2.vel_x > 0) // voltando da rede
+            {
+                tempo_anim_p2 += dt;
+
+                if (tempo_anim_p2 >= velocidade_anim)
+                {
+                    tempo_anim_p2 = 0;
+
+                    if (frame_p2 == 8)
+                        frame_p2 = 5;
+                    else if (frame_p2 == 5)
+                        frame_p2 = 9;
+                    else
+                        frame_p2 = 8;
+                }
+            }
+            else
+            {
+                tempo_anim_p2 += dt;
+
+                if (tempo_anim_p2 >= velocidade_anim)
+                {
+                    tempo_anim_p2 = 0;
+
+                    if (frame_p2 > 4)
+                        frame_p2 = 0;
+
+                    frame_p2++;
+
+                    if (frame_p2 > 4)
+                        frame_p2 = 0;
+                }
+            }
 
             // Contagem regressiva do saque; quando zera, libera a bola.
             if (bola_parada)
@@ -585,8 +787,26 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
 
         // DRAW
         BeginDrawing();
+        ClearBackground(BLACK);
 
-        ClearBackground((Color){135, 206, 235, 255});
+        DrawTexturePro(
+            fundo_volei[frame_fundo],
+            (Rectangle){
+                0,
+                0,
+                fundo_volei[frame_fundo].width,
+                fundo_volei[frame_fundo].height
+            },
+            (Rectangle){
+                0,
+                0,
+                LARGURA,
+                ALTURA
+            },
+            (Vector2){0,0},
+            0.0f,
+            WHITE
+        );
 
         // Timer central (ou "Ponto de ouro!")
         if (ponto_de_ouro) {
@@ -670,45 +890,62 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
         );
 
         // PLAYER 1
-        DrawRectangle(
-            p1.x,
-            p1.y + 30,
-            p1.largura,
-            p1.altura - 30,
-            p1.cor
-        );
-
-        DrawCircle(
-            p1.x + p1.largura / 2,
-            p1.y + CABECA_RAIO,
-            CABECA_RAIO,
-            SKYBLUE
-        );
-
-        // PLAYER 2
-        DrawRectangle(
-            p2.x,
-            p2.y + 30,
-            p2.largura,
-            p2.altura - 30,
-            p2.cor
-        );
-
-        DrawCircle(
-            p2.x + p2.largura / 2,
-            p2.y + CABECA_RAIO,
-            CABECA_RAIO,
-            PINK
-        );
-
-        // BOLA
-        DrawCircle(
-            bola.x,
-            bola.y,
-            bola.raio,
+        DrawTexturePro(
+            p1_anim[frame_p1],
+            (Rectangle){
+                0,
+                0,
+                p1_anim[frame_p1].width,
+                p1_anim[frame_p1].height
+            },
+            (Rectangle){
+                p1.x,
+                p1.y,
+                JOGADOR_W,
+                JOGADOR_H
+            },
+            (Vector2){0,0},
+            0,
             WHITE
         );
-
+        // PLAYER 2
+        DrawTexturePro(
+            p2_anim[frame_p2],
+            (Rectangle){
+                0,
+                0,
+                p2_anim[frame_p2].width,
+                p2_anim[frame_p2].height
+            },
+            (Rectangle){
+                p2.x,
+                p2.y,
+                JOGADOR_W,
+                JOGADOR_H
+            },
+            (Vector2){0,0},
+            0,
+            WHITE
+        );
+        // BOLA
+        DrawTexturePro(
+            bola_anim[frame_bola],
+            (Rectangle){
+                0,
+                0,
+                bola_anim[frame_bola].width,
+                bola_anim[frame_bola].height
+            },
+            (Rectangle){
+                bola.x - bola.raio,
+                bola.y - bola.raio,
+                bola.raio * 2,
+                bola.raio * 2
+            },
+            (Vector2){0,0},
+            0.0f,
+            WHITE
+        );
         // PLACAR
         DrawText(
             TextFormat("%d", pts1),
@@ -740,6 +977,23 @@ int jogar_volei(int *pontos_p1, int *pontos_p2)
         else
             vencedor = 0;
     }
+    for (int i = 0; i < NUM_FRAMES_FUNDO; i++)
+    {
+        UnloadTexture(fundo_volei[i]);
+    }
 
-    return vencedor;
+    for (int i = 0; i < NUM_FRAMES_BOLA; i++)
+    {
+        UnloadTexture(bola_anim[i]);
+    }
+    for (int i = 0; i < NUM_FRAMES_P1; i++)
+    {
+        UnloadTexture(p1_anim[i]);
+    }
+
+    for (int i = 0; i < NUM_FRAMES_P2; i++)
+    {
+        UnloadTexture(p2_anim[i]);
+    }
+        return vencedor;
 }
