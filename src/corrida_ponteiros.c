@@ -135,9 +135,6 @@ static void atualizar_velocidade(Corredor *c) {
 /* ------------------------------------------------------------------ */
 
 static void desenhar_pista(int pista_y, Color cor_pista) {
-    /* Fundo da pista */
-    DrawRectangle(HUD_LARGURA, pista_y - PISTA_ALTURA / 2,
-        LARGURA - HUD_LARGURA, PISTA_ALTURA, cor_pista);
     /* Bordas */
     DrawRectangle(HUD_LARGURA, pista_y - PISTA_ALTURA / 2,
         LARGURA - HUD_LARGURA, 3, DARKGRAY);
