@@ -108,7 +108,7 @@ Cena tela_selecao_modo(EstadoTorneio *t) {
             prox = CENA_SELECAO_MINIGAME;
         } else if (botao_clicado(btn_torneio)) {
             iniciar_torneio(t); 
-            Cena prox = tela_inserir_nomes(t->nomes[0], t->nomes[1]);
+            prox = tela_inserir_nomes(t->nomes[0], t->nomes[1]);
             if(prox == CENA_SELECAO_MODO) {
                 prox = CENA_SELECAO_MODO;
             } else {
@@ -397,6 +397,11 @@ Cena tela_inserir_nomes(char *nome_p1, char *nome_p2) {
                 confirmado = true;
             }
 
+            if (IsKeyPressed(KEY_ESCAPE)) {
+                return CENA_SELECAO_MODO;
+                }
+
+
             /* --- DRAW --- */
             BeginDrawing();
                 ClearBackground((Color){18, 22, 35, 255});
@@ -405,10 +410,6 @@ Cena tela_inserir_nomes(char *nome_p1, char *nome_p2) {
                 DrawText("ESC = Voltar",
                 W / 2 - MeasureText("ESC = Voltar", 18) / 2,
                 H - 40, 18, DARKGRAY);
-
-                if (IsKeyPressed(KEY_ESCAPE)) {
-                return CENA_SELECAO_MODO;
-                }
 
                 /* Cabeçalho */
                 const char *tit = "TORNEIO — Insira os nomes";
