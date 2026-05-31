@@ -2,6 +2,8 @@
 
 **Malloc Sports** é um título composto por múltiplos minigames de competição esportiva, desenvolvido com foco na experiência multiplayer local e inspirado no clássico "Wii Sports". 
 
+Clique <stong>[aqui](https://www.youtube.com/watch?v=6qEo1TM3fwI)</strong> para ver o vídeo de demonstração do jogo!
+
 ---
 
 ## 🔧 **Ferramentas Utilizadas**
