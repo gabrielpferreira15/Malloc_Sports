@@ -42,52 +42,49 @@ Cena tela_menu_principal(void) {
     const int H = GetScreenHeight();
 
     float bx = W / 2.0f - 180;
-    /* Três botões com 80 px de espaçamento entre si. */
-    Rectangle btn_jogar       = { bx, H / 2.0f - 100, 360, 60 };
-    Rectangle btn_highscores  = { bx, H / 2.0f -  20, 360, 60 };
-    Rectangle btn_sair        = { bx, H / 2.0f +  60, 360, 60 };
+
+    Rectangle btn_jogar      = { bx, H / 2.0f - 100, 360, 60 };
+    Rectangle btn_highscores = { bx, H / 2.0f -  20, 360, 60 };
+    Rectangle btn_sair       = { bx, H / 2.0f +  60, 360, 60 };
 
     Cena cena_atual = CENA_MENU;
+
+    Texture2D fundo = LoadTexture("assets/sprites/malloc.png");
 
     while (!WindowShouldClose()) {
         Cena prox = cena_atual;
 
-        if (botao_clicado(btn_jogar))      prox = CENA_SELECAO_MODO;
+        if (botao_clicado(btn_jogar)) prox = CENA_SELECAO_MODO;
         else if (botao_clicado(btn_highscores)) prox = CENA_HIGHSCORES;
-        else if (botao_clicado(btn_sair))  prox = CENA_SAIR;
+        else if (botao_clicado(btn_sair)) prox = CENA_SAIR;
 
         BeginDrawing();
+
             ClearBackground((Color){18, 22, 35, 255});
 
-            /* Título */
-            const char *titulo = "MALLOC SPORTS";
-            int ts = 64;
-            DrawText(titulo,
-                W / 2 - MeasureText(titulo, ts) / 2,
-                H / 2 - 210, ts, RAYWHITE);
+            DrawTexturePro(
+                fundo,
+                (Rectangle){0, 0, fundo.width, fundo.height},
+                (Rectangle){0, 0, W, H},
+                (Vector2){0, 0},
+                0.0f,
+                WHITE
+            );
 
-            /* Subtítulo */
-            const char *sub = "Minigames esportivos multiplayer";
-            DrawText(sub,
-                W / 2 - MeasureText(sub, 22) / 2,
-                H / 2 - 130, 22, LIGHTGRAY);
-
-            /* Linha decorativa */
-            DrawLine(W / 2 - 200, H / 2 - 108,
-                    W / 2 + 200, H / 2 - 108,
-                    (Color){80, 80, 80, 200});
-
-            desenhar_botao(btn_jogar,      "Jogar",                true);
+            // UI
+            desenhar_botao(btn_jogar, "Jogar", true);
             desenhar_botao(btn_highscores, "Highscores - Torneio", false);
-            desenhar_botao(btn_sair,       "Sair",                 false);
+            desenhar_botao(btn_sair, "Sair", false);
 
-            DrawText("Controles:  P1 = W/S/A/D     P2 = Setas",
-                W / 2 - MeasureText("Controles:  P1 = W/S/A/D     P2 = Setas", 18) / 2,
-                H - 40, 18, DARKGRAY);
         EndDrawing();
 
-        if (prox != cena_atual) return prox;
+        if (prox != cena_atual) {
+            UnloadTexture(fundo);   // ✔ SÓ AQUI
+            return prox;
+        }
     }
+
+    UnloadTexture(fundo); // ✔ fallback seguro
     return CENA_SAIR;
 }
 
@@ -118,6 +115,7 @@ Cena tela_selecao_modo(EstadoTorneio *t) {
         }
 
         BeginDrawing();
+
             ClearBackground((Color){18, 22, 35, 255});
             DrawText("SELECIONE O MODO",
                 W / 2 - MeasureText("SELECIONE O MODO", 40) / 2,
