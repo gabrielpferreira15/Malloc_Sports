@@ -55,7 +55,6 @@ Cena tela_menu_principal(void) {
         if (botao_clicado(btn_jogar))      prox = CENA_SELECAO_MODO;
         else if (botao_clicado(btn_highscores)) prox = CENA_HIGHSCORES;
         else if (botao_clicado(btn_sair))  prox = CENA_SAIR;
-        else if (IsKeyPressed(KEY_ESCAPE)) prox = CENA_SAIR;
 
         BeginDrawing();
             ClearBackground((Color){18, 22, 35, 255});
@@ -187,7 +186,7 @@ Cena tela_selecao_minigame(void) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  tela_resultado                                                      */
+/* tela_resultado                                                      */
 /* ------------------------------------------------------------------ */
 Cena tela_resultado(ResultadoPartida r) {
     const int W = GetScreenWidth();
@@ -252,8 +251,8 @@ Cena tela_resultado(ResultadoPartida r) {
                 100, mv, YELLOW);
 
             /* ============================================================
-               PLACAR CONDICIONAL REORGANIZADO
-               ============================================================ */
+            PLACAR CONDICIONAL REORGANIZADO
+            ============================================================ */
             
             if (r.torneio_final) {
                 // FIM DO TORNEIO: Exibe o placar direto do Vôlei E o placar acumulado total
@@ -308,20 +307,28 @@ Cena tela_resultado(ResultadoPartida r) {
                 DrawText(total_p2, W / 2 + 160 - MeasureText(total_p2, 32) / 2, H / 2 - 12, 32, r.vencedor == 2 ? YELLOW : RAYWHITE);
             } 
             else {
-                // JOGO AVULSO NORMAL: Exibe puramente e direto a pontuação da partida grande e limpa
-                const char *str_p1 = TextFormat("%d", r.pontos_p1);
-                const char *str_p2 = TextFormat("%d", r.pontos_p2);
+                // JOGO AVULSO NORMAL
+                if (r.ultimo_jogo == CENA_CORRIDA) {
+                    // Oculta completamente a pontuação na corrida avulsa, exibe apenas que terminou.
+                    // (A mensagem de "Jogador X Venceu" já está sendo desenhada na parte de cima da tela)
+                    const char *msg_fim = "FIM DA CORRIDA";
+                    DrawText(msg_fim, W / 2 - MeasureText(msg_fim, 24) / 2, H / 2 - 20, 24, LIGHTGRAY);
+                } else {
+                    // Exibe puramente e direto a pontuação da partida grande e limpa para Pong ou Vôlei
+                    const char *str_p1 = TextFormat("%d", r.pontos_p1);
+                    const char *str_p2 = TextFormat("%d", r.pontos_p2);
 
-                /* P1 */
-                DrawText("P1", W / 2 - 160 - MeasureText("P1", 24) / 2, H / 2 - 60, 24, LIGHTGRAY);
-                DrawText(str_p1, W / 2 - 160 - MeasureText(str_p1, 80) / 2, H / 2 - 30, 80, r.vencedor == 1 ? YELLOW : GRAY);
+                    /* P1 */
+                    DrawText("P1", W / 2 - 160 - MeasureText("P1", 24) / 2, H / 2 - 60, 24, LIGHTGRAY);
+                    DrawText(str_p1, W / 2 - 160 - MeasureText(str_p1, 80) / 2, H / 2 - 30, 80, r.vencedor == 1 ? YELLOW : GRAY);
 
-                /* Separador */
-                DrawText("x", W / 2 - MeasureText("x", 80) / 2, H / 2 - 30, 80, DARKGRAY);
+                    /* Separador */
+                    DrawText("x", W / 2 - MeasureText("x", 80) / 2, H / 2 - 30, 80, DARKGRAY);
 
-                /* P2 */
-                DrawText("P2", W / 2 + 160 - MeasureText("P2", 24) / 2, H / 2 - 60, 24, LIGHTGRAY);
-                DrawText(str_p2, W / 2 + 160 - MeasureText(str_p2, 80) / 2, H / 2 - 30, 80, r.vencedor == 2 ? YELLOW : GRAY);
+                    /* P2 */
+                    DrawText("P2", W / 2 + 160 - MeasureText("P2", 24) / 2, H / 2 - 60, 24, LIGHTGRAY);
+                    DrawText(str_p2, W / 2 + 160 - MeasureText(str_p2, 80) / 2, H / 2 - 30, 80, r.vencedor == 2 ? YELLOW : GRAY);
+                }
             }
             /* ============================================================ */
 

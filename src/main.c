@@ -1,20 +1,3 @@
-/* ============================================================
- * main.c — Ponto de entrada do Malloc Sports
- * ------------------------------------------------------------
- * Dono: DEV 1 — Gabriel Peixoto
- *
- * Responsabilidades:
- *   1. Abre a janela (uma única vez).
- *   2. Gerencia qual cena está ativa via switch.
- *   3. Fecha a janela ao sair.
- *
- * Fluxo atual:
- *   CENA_MENU  →  CENA_PONG  →  CENA_RESULTADO
- *                     ↑               |
- *                     └── revanche ───┘
- *                     └── menu ──→ CENA_MENU
- * ============================================================ */
-
 #include "raylib.h"
 #include "cenas.h"
 #include "menu.h"
@@ -28,6 +11,7 @@ int main(void) {
 
     // Janela (aberta UMA vez para todo o jogo)
     InitWindow(1280, 720, "Malloc Sports");
+    SetExitKey(0);
     SetTargetFPS(144);
 
     // Estado inicial
@@ -81,8 +65,9 @@ int main(void) {
                 }
 
                 resultado.vencedor = vencedor;
-                resultado.pontos_p1 = pts1_calc;
-                resultado.pontos_p2 = pts2_calc;
+                // No modo avulso, não importa a pontuação numérica, passamos 0
+                resultado.pontos_p1 = em_torneio ? pts1_calc : 0;
+                resultado.pontos_p2 = em_torneio ? pts2_calc : 0;
                 resultado.em_torneio = em_torneio;
                 resultado.torneio_final = false;
                 resultado.ultimo_jogo = CENA_CORRIDA;
@@ -115,8 +100,9 @@ int main(void) {
 
                 // 2. Preenche a estrutura de resultado para a tela intermediária
                 resultado.vencedor = vencedor;
-                resultado.pontos_p1 = pts1_calc; 
-                resultado.pontos_p2 = pts2_calc; 
+                // Se for torneio passa o calculado (ex: 700), se for avulso passa o cru (ex: 5)
+                resultado.pontos_p1 = em_torneio ? pts1_calc : pts1_cru; 
+                resultado.pontos_p2 = em_torneio ? pts2_calc : pts2_cru; 
                 resultado.em_torneio = em_torneio;
                 resultado.torneio_final = false;
                 resultado.ultimo_jogo = CENA_PONG;
@@ -145,8 +131,9 @@ int main(void) {
                 int pts1_calc = (pts1_cru * 100) + (vencedor == 1 ? 200 : 0);
                 int pts2_calc = (pts2_cru * 100) + (vencedor == 2 ? 200 : 0);
 
-                resultado.pontos_p1 = pts1_calc;
-                resultado.pontos_p2 = pts2_calc;
+                // Se for torneio passa o calculado, se for avulso passa o cru
+                resultado.pontos_p1 = em_torneio ? pts1_calc : pts1_cru;
+                resultado.pontos_p2 = em_torneio ? pts2_calc : pts2_cru;
                 resultado.ultimo_jogo = CENA_VOLEI;
                 resultado.em_torneio = em_torneio;
 
