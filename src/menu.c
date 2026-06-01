@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 #include "raylib.h"
 #include "menu.h"
@@ -7,6 +8,43 @@
 /* ------------------------------------------------------------------ */
 /*  Helpers de UI                                                       */
 /* ------------------------------------------------------------------ */
+
+enum { HIGHSCORE_COLS = 2, HIGHSCORE_ROWS = 5 };
+
+typedef struct {
+    char nome[NOME_TAM];
+    int  pontos;
+    bool ocupado;
+} HighscoreCell;
+
+static void carregar_highscores_matriz(HighscoreCell grid[HIGHSCORE_ROWS][HIGHSCORE_COLS]) {
+    for (int r = 0; r < HIGHSCORE_ROWS; r++) {
+        for (int c = 0; c < HIGHSCORE_COLS; c++) {
+            grid[r][c].ocupado = false;
+            grid[r][c].pontos = 0;
+            grid[r][c].nome[0] = '\0';
+        }
+    }
+
+    FILE *f = fopen(SCORES_ARQUIVO, "r");
+    if (!f) return;
+
+    char nome[NOME_TAM];
+    int pontos;
+    int i = 0;
+    while (i < SCORES_MAX && fscanf(f, " \"%4[^\"]\" - \"%d\"", nome, &pontos) == 2) {
+        int r = i / HIGHSCORE_COLS;
+        int c = i % HIGHSCORE_COLS;
+
+        strncpy(grid[r][c].nome, nome, NOME_TAM - 1);
+        grid[r][c].nome[NOME_TAM - 1] = '\0';
+        grid[r][c].pontos = pontos;
+        grid[r][c].ocupado = true;
+        i++;
+    }
+
+    fclose(f);
+}
 
 static bool botao_clicado(Rectangle r) {
     return CheckCollisionPointRec(GetMousePosition(), r)
@@ -496,8 +534,9 @@ Cena tela_highscores(void) {
     Rectangle btn_voltar = { W / 2.0f - 180, H - 100, 360, 60 };
     Cena cena_atual = CENA_HIGHSCORES;
 
-    // Carrega do arquivo texto e joga pra lista encadeada
-    Score *lista = scores_carregar(SCORES_ARQUIVO);
+    // Carrega direto do arquivo para a matriz 2x5 de blocos
+    HighscoreCell grid[HIGHSCORE_ROWS][HIGHSCORE_COLS];
+    carregar_highscores_matriz(grid);
 
     while (!WindowShouldClose()) {
         Cena prox = cena_atual;
@@ -513,38 +552,33 @@ Cena tela_highscores(void) {
                 W / 2 - MeasureText("HIGHSCORES - TORNEIO", 40) / 2,
                 50, 40, GOLD);
 
-            // Renderiza 2 colunas e 5 linhas
+            // Renderiza a matriz 2x5 de blocos
             int inicio_x_col1 = W / 2 - 400; // Coluna 1
             int inicio_x_col2 = W / 2 + 50;  // Coluna 2
             int inicio_y = 150;
             int espaco_y = 70;
 
-            Score *atual = lista;
-            for (int i = 0; i < 10; i++) {
-                int col_x = (i % 2 == 0) ? inicio_x_col1 : inicio_x_col2;
-                int row_y = inicio_y + (i / 2) * espaco_y;
+            for (int r = 0; r < HIGHSCORE_ROWS; r++) {
+                for (int c = 0; c < HIGHSCORE_COLS; c++) {
+                    int col_x = (c == 0) ? inicio_x_col1 : inicio_x_col2;
+                    int row_y = inicio_y + r * espaco_y;
+                    int pos = r * HIGHSCORE_COLS + c + 1;
 
-                if (atual != NULL) {
-                    // Tem pontuação pra mostrar, formata como "Pos: Nome - Pontos"
-                    const char *texto = TextFormat("%d: %s - %02d", i + 1, atual->nome, atual->pontos);
-                    DrawText(texto, col_x, row_y, 30, RAYWHITE);
-                    atual = atual->proximo;
-                } else {
-                    // Posição vazia
-                    const char *texto = TextFormat("%d: ---- - 00", i + 1);
-                    DrawText(texto, col_x, row_y, 30, DARKGRAY);
+                    if (grid[r][c].ocupado) {
+                        const char *texto = TextFormat("%d: %s - %02d",
+                            pos, grid[r][c].nome, grid[r][c].pontos);
+                        DrawText(texto, col_x, row_y, 30, RAYWHITE);
+                    } else {
+                        const char *texto = TextFormat("%d: ---- - 00", pos);
+                        DrawText(texto, col_x, row_y, 30, DARKGRAY);
+                    }
                 }
             }
 
             desenhar_botao(btn_voltar, "Voltar", false);
         EndDrawing();
 
-        if (prox != cena_atual) {
-            scores_liberar(lista);
-            return prox;
-        }
+        if (prox != cena_atual) return prox;
     }
-
-    scores_liberar(lista);
     return CENA_SAIR;
 }
