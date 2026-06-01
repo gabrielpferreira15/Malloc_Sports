@@ -21,3 +21,6 @@ out/
 
 # Lista de highscores
 highscores.txt
+
+# Arquivo gerado na compilação do jogo
+nul
